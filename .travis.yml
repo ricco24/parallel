@@ -1,0 +1,26 @@
+language: php
+
+services:
+    - mysql
+
+php:
+    - 5.6
+    - 7.0
+
+sudo: false
+
+before_script:
+    - travis_retry composer self-update
+    - travis_retry composer update ${COMPOSER_FLAGS} --no-interaction
+
+script:
+    - mkdir -p build/logs
+    - php vendor/bin/phpcs src/ --standard=PSR2 -n
+    - mysql -u root -e "DROP DATABASE IF EXISTS ferryman_test"
+    - mysql -u root -e "CREATE DATABASE ferryman_test"
+    - mysql -u root ferryman_test < tests/Data/structure.sql
+    - vendor/bin/phpunit --coverage-text --coverage-clover=coverage.clover --bootstrap=tests/bootstrapCI.php
+
+after_script:
+    - wget https://scrutinizer-ci.com/ocular.phar
+    - php ocular.phar code-coverage:upload --format=php-clover coverage.clover
