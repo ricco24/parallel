@@ -3,6 +3,7 @@
 namespace Parallel;
 
 use Parallel\Command\RunCommand;
+use Parallel\Helper\StringHelper;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
 use Symfony\Component\Console\Application;
@@ -130,20 +131,23 @@ class Parallel
                     'task' => $task
                 ];
 
-                $process['process']->start(function ($type, $buffer) use ($process, $input, $output) {
+                $process['process']->start(function ($type, $buffer) use ($process, $input, $output, $task) {
                     $taskName = $process['task']->getName();
 
                     // We can get multiple task line results in one buffer
                     $lines = explode("\n", trim($buffer));
 
                     if ($type === Process::ERR) {
-                        $this->data[$taskName] = $this->buildTaskData($taskName, [
+                        $this->buildTaskData($taskName, [
                             'code_errors_count' => count($lines)
                         ]);
 
                         foreach ($lines as $errorLine) {
-                            $this->logToFile($this->removeNewlines($errorLine), 'error');
+                            $this->logToFile($task->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine), 'error');
                         }
+
+                        $this->output->printToOutput($output, $this->data);
+                        return;
                     }
 
                     // We process only last (newest) line with progress data
@@ -155,8 +159,8 @@ class Parallel
                         $data[$var] = $value;
                     }
 
-                    $this->data[$taskName] = $this->buildTaskData($taskName, $data);
-                    $this->output->print($output, $this->data);
+                    $this->buildTaskData($taskName, $data);
+                    $this->output->printToOutput($output, $this->data);
                 });
                 sleep(1);
             }
@@ -166,57 +170,16 @@ class Parallel
     }
 
     /**
-     * @param string $string
-     * @return string
-     */
-    private function removeNewlines(string $string): string
-    {
-        return trim(preg_replace('/\s+/', ' ', $string));
-    }
-
-    /**
      * @param string $taskName
      * @param array $data
-     * @return array
      */
-    private function buildTaskData(string $taskName, array $data): array
+    private function buildTaskData(string $taskName, array $data): void
     {
-        $result = $this->data[$taskName] ?? [];
-
-        if (isset($data['current']) && isset($data['count'])) {
-            $result['progress'] = number_format((int) $data['current'] / (int) $data['count'] * 100);
+        if (!isset($this->data[$taskName])) {
+            $this->data[$taskName] = new TaskData();
         }
 
-        if (isset($data['count'])) {
-            $result['count'] = (int) $data['count'];
-            unset($data['count']);
-        }
-
-        if (isset($data['current'])) {
-            $result['current'] = (int) $data['current'];
-            unset($data['current']);
-        }
-
-        if (isset($data['duration'])) {
-            $result['duration'] = (float) $data['duration'];
-            unset($data['duration']);
-        }
-
-        if (isset($data['estimated'])) {
-            $result['estimated'] = (float) $data['estimated'];
-            unset($data['estimated']);
-        }
-
-        if (isset($data['code_errors_count'])) {
-            $result['code_errors_count'] += $data['code_errors_count'];
-            unset($data['code_errors_count']);
-        }
-
-        foreach ($data as $key => $value) {
-            $result['other'][$key] = $this->removeNewlines($value);
-        }
-
-        return $result;
+        $this->data[$taskName]->fill($data);
     }
 
     /**

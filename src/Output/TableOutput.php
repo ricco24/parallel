@@ -2,6 +2,8 @@
 
 namespace Parallel\Output;
 
+use Parallel\Helper\TimeHelper;
+use Parallel\TaskData;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\Table as TableHelper;
@@ -21,7 +23,7 @@ class TableOutput implements Output
      * @param OutputInterface $output
      * @param array $data
      */
-    public function print(OutputInterface $output, array $data): void
+    public function printToOutput(OutputInterface $output, array $data): void
     {
         $this->clearScreen($output);
         $this->printTable($output, $data);
@@ -64,14 +66,14 @@ class TableOutput implements Output
         foreach ($data as $rowTitle => $row) {
             $table->addRow([
                 $this->formatTitle($rowTitle, $row),
-                number_format($row['count']),
-                isset($row['other']['success']) ? number_format($row['other']['success']) : '?',
-                isset($row['other']['skip']) ? number_format($row['other']['skip']) : '?',
-                isset($row['other']['error']) ? number_format($row['other']['error']) : '?',
-                isset($row['code_errors_count']) ? number_format($row['code_errors_count']) : 0,
-                isset($row['progress']) ? $this->progress($row['progress']) : '?',
-                isset($row['duration']) ? $this->formatTime($row['duration']) : '?',
-                isset($row['estimated']) ? $this->formatTime($row['estimated']): '?'
+                number_format($row->getCount()),
+                number_format($row->getExtra('success', 0)),
+                number_format($row->getExtra('skip', 0)),
+                number_format($row->getExtra('error', 0)),
+                number_format($row->getCodeErrorsCount()),
+                $this->progress($row->getProgress()),
+                TimeHelper::formatTime($row->getDuration()),
+                TimeHelper::formatTime($row->getEstimated())
             ]);
         }
         $table->render();
@@ -95,7 +97,7 @@ class TableOutput implements Output
                 $result .= '-';
             }
         }
-        return $result . ' ' . $progress. '%';
+        return $result . ' ' . number_format($progress) . '%';
     }
 
     /**
@@ -110,53 +112,23 @@ class TableOutput implements Output
 
     /**
      * @param string $rowTitle
-     * @param array $row
+     * @param TaskData $row
      * @return string
      */
-    private function formatTitle(string $rowTitle, array $row): string
+    private function formatTitle(string $rowTitle, TaskData $row): string
     {
-        if (!isset($row['progress']) || (isset($row['progress']) && $row['progress'] != 100)) {
+        if ($row->getProgress() != 100) {
             return "\xF0\x9F\x95\x92 " . $rowTitle;
         }
 
-        if (isset($row['other']['success']) && $row['other']['success'] == $row['count']) {
+        if ($row->getExtra('success', 0) == $row->getCount()) {
             return $this->tag('green', "\xF0\x9F\x97\xB8 " . $rowTitle);
         }
 
-        if (isset($row['other']['error']) && $row['other']['error'] != 0) {
+        if ($row->getExtra('error', 0) != 0) {
             return $this->tag('red', "\xF0\x9F\x97\xB4 " . $rowTitle);
         }
 
         return $rowTitle;
-    }
-
-    /**
-     * @param int $seconds
-     * @return string
-     */
-    private function formatTime(int $seconds): string
-    {
-        $hours = 0;
-        $minutes = 0;
-
-        if ($seconds > 3600) {
-            $hours = floor($seconds / 3600);
-            $seconds -= $hours * 3600;
-        }
-
-        if ($seconds > 60) {
-            $minutes = floor($seconds / 60);
-            $seconds -= $minutes * 60;
-        }
-
-        if ($hours > 0) {
-            return $hours . 'h ' . $minutes . 'm ' . $seconds . 's';
-        }
-
-        if ($minutes > 0) {
-            return $minutes . 'm ' . $seconds . 's';
-        }
-
-        return $seconds . 's';
     }
 }

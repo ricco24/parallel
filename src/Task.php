@@ -37,6 +37,14 @@ abstract class Task extends Command
     }
 
     /**
+     * @return string
+     */
+    public function getSanitizedName(): string
+    {
+        return str_replace(':', '_', $this->getName());
+    }
+
+    /**
      * Start task timer
      */
     protected function start(): void
@@ -151,13 +159,5 @@ abstract class Task extends Command
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
         throw new LogicException('You must override the process() method in the concrete task class.');
-    }
-
-    /**
-     * @return string
-     */
-    private function getSanitizedName(): string
-    {
-        return str_replace(':', '_', $this->getName());
     }
 }
