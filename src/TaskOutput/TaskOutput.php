@@ -2,15 +2,9 @@
 
 namespace Parallel\TaskOutput;
 
+use Symfony\Component\Console\Output\OutputInterface;
+
 interface TaskOutput
 {
-    public function format(int $count, int $current, float $duration): string;
-
-    public function parse(string $input): bool;
-
-    public function getCount(): int;
-
-    public function getCurrent(): int;
-
-    public function getDuration(): float;
+    public function write(OutputInterface $output, array $data): void;
 }

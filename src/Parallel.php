@@ -12,8 +12,14 @@ use Symfony\Component\Process\Process;
 
 class Parallel
 {
+    /** @var string */
+    private $binDirPath;
+
     /** @var int */
     private $concurrent;
+
+    /** @var string */
+    private $logDir;
 
     /** @var Output */
     private $output;
@@ -28,10 +34,13 @@ class Parallel
     private $data = [];
 
     /**
+     * Parallel constructor.
+     * @param string $binDirPath
      * @param int $concurrent
      */
-    public function __construct(int $concurrent = 3)
+    public function __construct(string $binDirPath, int $concurrent = 3)
     {
+        $this->binDirPath = $binDirPath;
         $this->concurrent = $concurrent;
         $this->app = new Application();
         $this->app->add(new RunCommand($this));
@@ -52,6 +61,16 @@ class Parallel
     }
 
     /**
+     * @param string $logDir
+     * @return Parallel
+     */
+    public function setLogDir(string $logDir): Parallel
+    {
+        $this->logDir = $logDir;
+        return $this;
+    }
+
+    /**
      * @param Task $task
      * @param array $runAfter
      * @return Parallel
@@ -63,12 +82,19 @@ class Parallel
         return $this;
     }
 
-    public function runConsoleApp()
+    /**
+     * Start parallel
+     */
+    public function runConsoleApp(): void
     {
         $this->app->run();
     }
 
-    public function execute(InputInterface $input, OutputInterface $output)
+    /**
+     * @param InputInterface $input
+     * @param OutputInterface $output
+     */
+    public function execute(InputInterface $input, OutputInterface $output): void
     {
         $start = microtime(true);
         $this->output->startMessage($output);
@@ -90,35 +116,91 @@ class Parallel
             $runnableTasks = $this->tasks->getRunnableTasks($this->concurrent - count($processes));
 
             foreach ($runnableTasks as $task) {
+                $arguments = null;
+                if ($this->logDir) {
+                    $arguments = '--log_dir=' . $this->logDir;
+                }
+
                 $processes[] = $process = [
-                    'process' => new Process('php parallel ' . $task->getName(), '/var/www/Parallel/bin'),
+                    'process' => new Process('php parallel ' . $task->getName() . ' ' . $arguments, $this->binDirPath, null, null, null),
                     'task' => $task
                 ];
 
                 $process['process']->start(function ($type, $buffer) use ($process, $input, $output) {
-                    if (Process::ERR === $type) {
-                        $output->writeln('ERR > ' . $buffer);
-                    } else {
-                        $data = [];
-                        foreach (explode(';', $buffer) as $statement) {
-                            list($var, $value) = explode(':', $statement);
-                            $data[$var] = $value;
-                        }
-
-                        $this->data[$process['task']->getName()] = [
-                            'count' => trim(preg_replace('/\s+/', ' ', $data['count'])), // removing newlines
-                            'current' => trim(preg_replace('/\s+/', ' ', $data['current'])),
-                            'duration' => isset($data['duration']) ? trim(preg_replace('/\s+/', ' ', $data['duration'])) : null,
-                            'estimated' => isset($data['estimated']) ? trim(preg_replace('/\s+/', ' ', $data['estimated'])) : null,
-                            'progress' => number_format((int) $data['current'] / (int) $data['count'] * 100)
-                        ];
-                        $this->output->print($output, $this->data);
+                    $taskName = $process['task']->getName();
+                    if ($type === Process::ERR) {
+                        $this->data[$taskName] = $this->buildTaskData($taskName, [
+                            'code_error' => $this->removeNewlines($buffer)
+                        ]);
                     }
+
+                    $data = [];
+                    foreach (explode(';', $buffer) as $statement) {
+                        list($var, $value) = explode(':', $statement);
+                        $data[$var] = $value;
+                    }
+
+                    $this->data[$taskName] = $this->buildTaskData($taskName, $data);
+                    $this->output->print($output, $this->data);
                 });
                 sleep(1);
             }
         }
 
         $this->output->finishMessage($output, $this->data, microtime(true) - $start);
+    }
+
+    /**
+     * @param string $string
+     * @return string
+     */
+    private function removeNewlines(string $string): string
+    {
+        return trim(preg_replace('/\s+/', ' ', $string));
+    }
+
+    /**
+     * @param string $taskName
+     * @param array $data
+     * @return array
+     */
+    private function buildTaskData(string $taskName, array $data): array
+    {
+        $result = $this->data[$taskName];
+
+        if (isset($data['current']) && isset($data['count'])) {
+            $result['progress'] = number_format((int) $data['current'] / (int) $data['count'] * 100);
+        }
+
+        if (isset($data['count'])) {
+            $result['count'] = (int) $data['count'];
+            unset($data['count']);
+        }
+
+        if (isset($data['current'])) {
+            $result['current'] = (int) $data['current'];
+            unset($data['current']);
+        }
+
+        if (isset($data['duration'])) {
+            $result['duration'] = (float) $data['duration'];
+            unset($data['duration']);
+        }
+
+        if (isset($data['estimated'])) {
+            $result['estimated'] = (float) $data['estimated'];
+            unset($data['estimated']);
+        }
+
+        if (isset($data['code_error'])) {
+            $result['code_errors'][] = $data['code_error'];
+            unset($data['code_error']);
+        }
+
+        foreach ($data as $key => $value) {
+            $result['other'][$key] = $this->removeNewlines($value);
+        }
+
+        return $result;
     }
 }

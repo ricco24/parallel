@@ -2,27 +2,33 @@
 
 namespace Parallel;
 
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Output\OutputInterface;
+use Parallel\Task\ProgressTask;
+use Parallel\TaskResult\SuccessResult;
+use Parallel\TaskResult\TaskResult;
 
-class CategoriesTask extends Task
+class CategoriesTask extends ProgressTask
 {
-    private $loops = 10;
+    private $itemsCount = 10;
 
-    private $identifier = 'user';
+    private $processedItems = 1;
 
-    protected function execute(InputInterface $input, OutputInterface $output)
+    private $fileName = '/var/www/libs/parallel/output/categories.txt';
+
+    protected function items(): iterable
     {
-        $start = microtime(true);
-        $fileName = '/var/www/Parallel/output/categories.txt';
+        return range(1, $this->itemsCount);
+    }
 
-        for ($i = 1; $i <= $this->loops; $i++) {
-            $estimated = round((microtime(true) - $start) / $i * $this->loops);
+    protected function itemsCount(): int
+    {
+        return $this->itemsCount;
+    }
 
-            $output->writeln('count:' . $this->loops . ';current:' . $i . ';duration:' . round(microtime(true) - $start) . ';estimated:' . $estimated);
-            $content = file_exists($fileName) ? file_get_contents($fileName) : '';
-            file_put_contents($fileName, $content . "\n" . $i . '-' . $this->identifier);
-            sleep(1);
-        }
+    protected function processItem($item): TaskResult
+    {
+        file_put_contents($this->fileName, "\n" . $this->processedItems++ . '-' . 'categories', FILE_APPEND);
+        sleep(1);
+
+        return new SuccessResult();
     }
 }

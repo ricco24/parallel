@@ -2,36 +2,21 @@
 
 namespace Parallel\TaskOutput;
 
+use Symfony\Component\Console\Output\OutputInterface;
+
 class BaseTaskOutput implements TaskOutput
 {
-    private $data = [];
-
-    public function format(int $count, int $current, float $duration): string
+    /**
+     * @param OutputInterface $output
+     * @param array $data
+     */
+    public function write(OutputInterface $output, array $data): void
     {
-        return 'count:' . $count . ';current:' . $current . ';duration:' . $duration;
-    }
-
-    public function parse(string $string): bool
-    {
-        $this->data = [];
-        foreach (explode(';', $string) as $statement) {
-            list($var, $value) = explode(':', $statement);
-            $this->data[$var] = $value;
+        $string = '';
+        foreach ($data as $key => $value) {
+            $string .= empty($string) ? "$key:$value" : ";$key:$value";
         }
-    }
 
-    public function getCount(): int
-    {
-        return $this->data['count'] ?? 0;
-    }
-
-    public function getCurrent(): int
-    {
-        return $this->data['current'] ?? 0;
-    }
-
-    public function getDuration(): float
-    {
-        return $this->data['duration'] ?? 0.0;
+        $output->writeln($string);
     }
 }

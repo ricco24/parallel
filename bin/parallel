@@ -3,7 +3,8 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$parallel = new \Parallel\Parallel(5);
+$parallel = new \Parallel\Parallel(__DIR__,5);
+$parallel->setLogDir(__DIR__);
 $parallel->addTask(new \Parallel\AdminsTask('task:admin'), ['task:categories']);
 $parallel->addTask(new \Parallel\UsersTask('task:user'));
 $parallel->addTask(new \Parallel\ArticlesTask('task:articles'));

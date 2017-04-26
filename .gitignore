@@ -1,3 +1,7 @@
+workspace.xml
+vcs.xml
 composer.lock
+/.idea/
 /vendor/
 /build/
+/output/
