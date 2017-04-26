@@ -131,16 +131,26 @@ class Parallel
                 ];
 
                 $process['process']->start(function ($type, $buffer) use ($process, $input, $output) {
-                    var_dump($buffer);
                     $taskName = $process['task']->getName();
+
+                    // We can get multiple task line results in one buffer
+                    $lines = explode("\n", trim($buffer));
+
                     if ($type === Process::ERR) {
                         $this->data[$taskName] = $this->buildTaskData($taskName, [
-                            'code_error' => $this->removeNewlines($buffer)
+                            'code_errors_count' => count($lines)
                         ]);
+
+                        foreach ($lines as $errorLine) {
+                            $this->logToFile($this->removeNewlines($errorLine), 'error');
+                        }
                     }
 
+                    // We process only last (newest) line with progress data
+                    $lastLine = end($lines);
+
                     $data = [];
-                    foreach (explode(';', $buffer) as $statement) {
+                    foreach (explode(';', $lastLine) as $statement) {
                         list($var, $value) = explode(':', $statement);
                         $data[$var] = $value;
                     }
@@ -171,7 +181,7 @@ class Parallel
      */
     private function buildTaskData(string $taskName, array $data): array
     {
-        $result = $this->data[$taskName];
+        $result = $this->data[$taskName] ?? [];
 
         if (isset($data['current']) && isset($data['count'])) {
             $result['progress'] = number_format((int) $data['current'] / (int) $data['count'] * 100);
@@ -197,9 +207,9 @@ class Parallel
             unset($data['estimated']);
         }
 
-        if (isset($data['code_error'])) {
-            $result['code_errors'][] = $data['code_error'];
-            unset($data['code_error']);
+        if (isset($data['code_errors_count'])) {
+            $result['code_errors_count'] += $data['code_errors_count'];
+            unset($data['code_errors_count']);
         }
 
         foreach ($data as $key => $value) {
@@ -207,5 +217,18 @@ class Parallel
         }
 
         return $result;
+    }
+
+    /**
+     * @param string $line
+     * @param string $type
+     */
+    protected function logToFile(string $line, string $type): void
+    {
+        if (!$this->logDir) {
+            return;
+        }
+
+        file_put_contents($this->logDir . '/parallel_' . $type, "\n[" . date('d.m.Y H:i:s') . ']: ' . $line, FILE_APPEND);
     }
 }

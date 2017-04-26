@@ -68,7 +68,7 @@ class TableOutput implements Output
                 isset($row['other']['success']) ? number_format($row['other']['success']) : '?',
                 isset($row['other']['skip']) ? number_format($row['other']['skip']) : '?',
                 isset($row['other']['error']) ? number_format($row['other']['error']) : '?',
-                isset($row['code_errors']) ? number_format(count($row['code_errors'])) : 0,
+                isset($row['code_errors_count']) ? number_format($row['code_errors_count']) : 0,
                 isset($row['progress']) ? $this->progress($row['progress']) : '?',
                 isset($row['duration']) ? $this->formatTime($row['duration']) : '?',
                 isset($row['estimated']) ? $this->formatTime($row['estimated']): '?'
