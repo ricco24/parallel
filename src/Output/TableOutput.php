@@ -5,6 +5,7 @@ namespace Parallel\Output;
 use Parallel\Helper\TimeHelper;
 use Parallel\TaskData;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
+use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\Table as TableHelper;
 use Symfony\Component\Process\Process;
@@ -22,11 +23,12 @@ class TableOutput implements Output
     /**
      * @param OutputInterface $output
      * @param array $data
+     * @param float $elapsedTime
      */
-    public function printToOutput(OutputInterface $output, array $data): void
+    public function printToOutput(OutputInterface $output, array $data, float $elapsedTime): void
     {
         $this->clearScreen($output);
-        $this->printTable($output, $data);
+        $this->printTable($output, $data, $elapsedTime);
     }
 
     /**
@@ -52,8 +54,9 @@ class TableOutput implements Output
     /**
      * @param OutputInterface $output
      * @param array $data
+     * @param float $elapsedTime
      */
-    private function printTable(OutputInterface $output, array $data): void
+    private function printTable(OutputInterface $output, array $data, float $elapsedTime): void
     {
         $output->getFormatter()->setStyle('red', new OutputFormatterStyle('red'));
         $output->getFormatter()->setStyle('green', new OutputFormatterStyle('green'));
@@ -63,6 +66,15 @@ class TableOutput implements Output
         $table = new TableHelper($output);
         $table
             ->setHeaders($headers);
+
+        $total = [
+            'count' => 0,
+            'success' => 0,
+            'skip' => 0,
+            'error' => 0,
+            'code_errors' => 0,
+            'duration' => 0
+        ];
         foreach ($data as $rowTitle => $row) {
             $table->addRow([
                 $this->formatTitle($rowTitle, $row),
@@ -75,7 +87,28 @@ class TableOutput implements Output
                 TimeHelper::formatTime($row->getDuration()),
                 TimeHelper::formatTime($row->getEstimated())
             ]);
+
+            $total['count'] += $row->getCount();
+            $total['success'] += $row->getExtra('success', 0);
+            $total['skip'] += $row->getExtra('skip', 0);
+            $total['error'] += $row->getExtra('error', 0);
+            $total['code_errors'] += $row->getCodeErrorsCount();
+            $total['duration'] += $row->getDuration();
         }
+
+        $table->addRow(new TableSeparator());
+        $table->addRow([
+            'Total (Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime) . ')',
+            number_format($total['count']),
+            number_format($total['success']),
+            number_format($total['skip']),
+            number_format($total['error']),
+            number_format($total['code_errors']),
+            'Real duration: ' . TimeHelper::formatTime($elapsedTime),
+            TimeHelper::formatTime($total['duration']),
+            ''
+        ]);
+
         $table->render();
     }
 

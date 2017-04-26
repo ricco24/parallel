@@ -131,7 +131,7 @@ class Parallel
                     'task' => $task
                 ];
 
-                $process['process']->start(function ($type, $buffer) use ($process, $input, $output, $task) {
+                $process['process']->start(function ($type, $buffer) use ($process, $input, $output, $task, $start) {
                     $taskName = $process['task']->getName();
 
                     // We can get multiple task line results in one buffer
@@ -146,7 +146,7 @@ class Parallel
                             $this->logToFile($task->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine), 'error');
                         }
 
-                        $this->output->printToOutput($output, $this->data);
+                        $this->output->printToOutput($output, $this->data, microtime(true) - $start);
                         return;
                     }
 
@@ -160,7 +160,7 @@ class Parallel
                     }
 
                     $this->buildTaskData($taskName, $data);
-                    $this->output->printToOutput($output, $this->data);
+                    $this->output->printToOutput($output, $this->data, microtime(true) - $start);
                 });
                 sleep(1);
             }

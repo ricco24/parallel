@@ -8,7 +8,7 @@ interface Output
 {
     public function startMessage(OutputInterface $output): void;
 
-    public function printToOutput(OutputInterface $output, array $data): void;
+    public function printToOutput(OutputInterface $output, array $data, float $elapsedTime): void;
 
     public function finishMessage(OutputInterface $output, array $data, float $duration): void;
 }
