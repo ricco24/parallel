@@ -15,6 +15,9 @@ class Parallel
     /** @var string */
     private $binDirPath;
 
+    /** @var string */
+    private $fileName;
+
     /** @var int */
     private $concurrent;
 
@@ -34,13 +37,14 @@ class Parallel
     private $data = [];
 
     /**
-     * Parallel constructor.
      * @param string $binDirPath
+     * @param string $fileName
      * @param int $concurrent
      */
-    public function __construct(string $binDirPath, int $concurrent = 3)
+    public function __construct(string $binDirPath, string $fileName, int $concurrent = 3)
     {
         $this->binDirPath = $binDirPath;
+        $this->fileName = $fileName;
         $this->concurrent = $concurrent;
         $this->app = new Application();
         $this->app->add(new RunCommand($this));
@@ -122,11 +126,12 @@ class Parallel
                 }
 
                 $processes[] = $process = [
-                    'process' => new Process('php parallel ' . $task->getName() . ' ' . $arguments, $this->binDirPath, null, null, null),
+                    'process' => new Process('php ' . $this->fileName . ' ' . $task->getName() . ' ' . $arguments, $this->binDirPath, null, null, null),
                     'task' => $task
                 ];
 
                 $process['process']->start(function ($type, $buffer) use ($process, $input, $output) {
+                    var_dump($buffer);
                     $taskName = $process['task']->getName();
                     if ($type === Process::ERR) {
                         $this->data[$taskName] = $this->buildTaskData($taskName, [

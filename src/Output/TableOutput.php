@@ -70,8 +70,8 @@ class TableOutput implements Output
                 isset($row['other']['error']) ? number_format($row['other']['error']) : '?',
                 isset($row['code_errors']) ? number_format(count($row['code_errors'])) : 0,
                 isset($row['progress']) ? $this->progress($row['progress']) : '?',
-                $this->formatTime($row['duration']),
-                $this->formatTime($row['estimated'])
+                isset($row['duration']) ? $this->formatTime($row['duration']) : '?',
+                isset($row['estimated']) ? $this->formatTime($row['estimated']): '?'
             ]);
         }
         $table->render();
