@@ -48,6 +48,12 @@ abstract class BatchProgressTask extends BaseTask
                 } else {
                     $this->processResult($taskResult);
                 }
+
+                $this->notify($itemsCount, $processedItems, [
+                    'success' => $this->success,
+                    'skip' => $this->skip,
+                    'error' => $this->error
+                ]);
             }
 
             try {

@@ -98,14 +98,14 @@ class TableOutput implements Output
 
         $table->addRow(new TableSeparator());
         $table->addRow([
-            'Total (Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime) . ')',
+            'Total',
             number_format($total['count']),
             number_format($total['success']),
             number_format($total['skip']),
             number_format($total['error']),
             number_format($total['code_errors']),
-            'Real duration: ' . TimeHelper::formatTime($elapsedTime),
-            TimeHelper::formatTime($total['duration']),
+            '(Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime) . ')',
+            TimeHelper::formatTime($elapsedTime),
             ''
         ]);
 
