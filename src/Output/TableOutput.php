@@ -104,7 +104,7 @@ class TableOutput implements Output
             number_format($total['skip']),
             number_format($total['error']),
             number_format($total['code_errors']),
-            '(Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime) . ')',
+            'Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime),
             TimeHelper::formatTime($elapsedTime),
             ''
         ]);
