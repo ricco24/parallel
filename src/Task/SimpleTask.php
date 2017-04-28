@@ -9,6 +9,7 @@ use Parallel\TaskResult\TaskResult;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Parallel\Task as BaseTask;
+use Throwable;
 
 abstract class SimpleTask extends BaseTask
 {
@@ -20,7 +21,11 @@ abstract class SimpleTask extends BaseTask
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
         $this->notifyStart();
-        $result = $this->processTask($input, $output);
+        try {
+            $result = $this->processTask($input, $output);
+        } catch (Throwable $e) {
+            $result = new ErrorResult($e->getMessage());
+        }
         $this->notifyEnd([
             'success' => $result instanceof SuccessResult ? 1 : 0,
             'skip' => $result instanceof SkipResult ? 1 : 0,
