@@ -47,13 +47,9 @@ abstract class BatchProgressTask extends BaseTask
                     $itemsToProcess[] = $taskResult->getData();
                 } else {
                     $this->processResult($taskResult);
+                    $processedItems++;
                 }
-
-                $this->notify($itemsCount, $processedItems, [
-                    'success' => $this->success,
-                    'skip' => $this->skip,
-                    'error' => $this->error
-                ]);
+                $this->sendNotify($itemsCount, $processedItems);
             }
 
             try {
@@ -65,12 +61,7 @@ abstract class BatchProgressTask extends BaseTask
             }
 
             $processedItems += count($itemsToProcess);
-            $this->notify($itemsCount, $processedItems, [
-                'success' => $this->success,
-                'skip' => $this->skip,
-                'error' => $this->error
-            ]);
-
+            $this->sendNotify($itemsCount, $processedItems);
 
             $items = $this->items($processedItems);
         }
@@ -90,6 +81,20 @@ abstract class BatchProgressTask extends BaseTask
         } elseif ($taskResult instanceof ErrorResult) {
             $this->error++;
         }
+    }
+
+    /**
+     * Wrapper function for notification
+     * @param int $itemsCount
+     * @param int $processedItems
+     */
+    private function sendNotify(int $itemsCount, int $processedItems): void
+    {
+        $this->notify($itemsCount, $processedItems, [
+            'success' => $this->success,
+            'skip' => $this->skip,
+            'error' => $this->error
+        ]);
     }
 
     /**
