@@ -57,7 +57,6 @@ abstract class BatchProgressTask extends BaseTask
                     $this->processResult($taskResult);
                     $processedItems++;
                 }
-                $this->sendNotify($itemsCount, $processedItems);
             }
 
             try {
