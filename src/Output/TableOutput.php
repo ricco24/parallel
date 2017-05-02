@@ -154,12 +154,12 @@ class TableOutput implements Output
             return "\xF0\x9F\x95\x92 " . $rowTitle;
         }
 
-        if ($row->getExtra('success', 0) == $row->getCount()) {
-            return $this->tag('green', "\xF0\x9F\x97\xB8 " . $rowTitle);
-        }
-
         if ($row->getExtra('error', 0) != 0) {
             return $this->tag('red', "\xF0\x9F\x97\xB4 " . $rowTitle);
+        }
+
+        if ($row->getExtra('success', 0) + $row->getExtra('skip', 0) == $row->getCount()) {
+            return $this->tag('green', "\xF0\x9F\x97\xB8 " . $rowTitle);
         }
 
         return $rowTitle;
