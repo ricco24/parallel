@@ -60,6 +60,7 @@ class TableOutput implements Output
     {
         $output->getFormatter()->setStyle('red', new OutputFormatterStyle('red'));
         $output->getFormatter()->setStyle('green', new OutputFormatterStyle('green'));
+        $output->getFormatter()->setStyle('yellow', new OutputFormatterStyle('yellow'));
 
         $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Duration', 'Estimated', 'Message'];
 
@@ -158,6 +159,10 @@ class TableOutput implements Output
 
         if ($row->getExtra('error', 0) != 0) {
             return $this->tag('red', "\xF0\x9F\x97\xB4 " . $rowTitle);
+        }
+
+        if ($row->getCodeErrorsCount() != 0) {
+            return $this->tag('yellow', "\xF0\x9F\x97\xB2 " . $rowTitle);
         }
 
         if ($row->getExtra('success', 0) + $row->getExtra('skip', 0) == $row->getCount()) {

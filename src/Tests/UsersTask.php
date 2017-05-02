@@ -47,6 +47,10 @@ class UsersTask extends BatchProgressTask
         file_put_contents($this->fileName, "\n" . $this->processedItems++ . '-' . 'users', FILE_APPEND);
         sleep(1);
 
+        if ($pi == 3) {
+            return new SkipResult();
+        }
+
         return new SuccessResult(['a', 'b', $pi]);
     }
 
