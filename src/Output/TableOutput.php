@@ -61,7 +61,7 @@ class TableOutput implements Output
         $output->getFormatter()->setStyle('red', new OutputFormatterStyle('red'));
         $output->getFormatter()->setStyle('green', new OutputFormatterStyle('green'));
 
-        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Duration', 'Estimated'];
+        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Duration', 'Estimated', 'Message'];
 
         $table = new TableHelper($output);
         $table
@@ -85,7 +85,8 @@ class TableOutput implements Output
                 number_format($row->getCodeErrorsCount()),
                 $this->progress($row->getProgress()),
                 TimeHelper::formatTime($row->getDuration()),
-                TimeHelper::formatTime($row->getEstimated())
+                TimeHelper::formatTime($row->getEstimated()),
+                $row->getExtra('message', '')
             ]);
 
             $total['count'] += $row->getCount();
@@ -106,6 +107,7 @@ class TableOutput implements Output
             number_format($total['code_errors']),
             'Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime),
             TimeHelper::formatTime($elapsedTime),
+            '',
             ''
         ]);
 

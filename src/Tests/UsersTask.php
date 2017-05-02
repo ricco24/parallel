@@ -3,18 +3,29 @@
 namespace Parallel;
 
 use Parallel\Task\BatchProgressTask;
+use Parallel\TaskResult\SkipResult;
 use Parallel\TaskResult\SuccessResult;
 use Parallel\TaskResult\TaskResult;
 
 class UsersTask extends BatchProgressTask
 {
-    private $itemsCount = 50293;
+    private $itemsCount = 24;
 
     private $processedItems = 1;
 
     private $fileName = '/var/www/libs/parallel/output/users.txt';
 
     private $batch = 3;
+
+    protected function startup(): void
+    {
+        sleep(5);
+    }
+
+    protected function shutdown(): void
+    {
+        sleep(5);
+    }
 
     protected function items(int $processed): iterable
     {

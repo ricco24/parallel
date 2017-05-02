@@ -77,7 +77,7 @@ abstract class Task extends Command
      * @param int $current
      * @param array $data
      */
-    protected function notify(int $count, int $current, $data = []): void
+    protected function notify(int $count, int $current, array $data = []): void
     {
         $this->taskOutput->write($this->output, array_merge($data, [
             'count' => $count,

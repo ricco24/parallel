@@ -29,6 +29,8 @@ abstract class BatchProgressTask extends BaseTask
      */
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
+        $this->launchStartup();
+
         $items = $this->items(0);
         $itemsCount = $this->itemsCount();
         $processedItems = 0;
@@ -72,6 +74,8 @@ abstract class BatchProgressTask extends BaseTask
             $items = $this->items($processedItems);
         }
 
+        $this->launchShutdown($itemsCount, $processedItems);
+
         return new SuccessResult();
     }
 
@@ -93,14 +97,54 @@ abstract class BatchProgressTask extends BaseTask
      * Wrapper function for notification
      * @param int $itemsCount
      * @param int $processedItems
+     * @param array $data
      */
-    private function sendNotify(int $itemsCount, int $processedItems): void
+    private function sendNotify(int $itemsCount, int $processedItems, array $data = []): void
     {
-        $this->notify($itemsCount, $processedItems, [
+        $this->notify($itemsCount, $processedItems, array_merge([
             'success' => $this->success,
             'skip' => $this->skip,
-            'error' => $this->error
-        ]);
+            'error' => $this->error,
+            'message' => ''
+        ], $data));
+    }
+
+    /**
+     * Startup wrapper
+     */
+    private function launchStartup(): void
+    {
+        $this->sendNotify(0, 0, ['message' => 'Running startup prepare']);
+        $this->startup();
+        $this->sendNotify(0, 0);
+    }
+
+    /**
+     * Shutdown wrapper
+     * @param int $itemsCount
+     * @param int $processItems
+     */
+    private function launchShutdown(int $itemsCount, int $processItems): void
+    {
+        $this->sendNotify($itemsCount, $processItems, ['message' => 'Running shutdown cleanup']);
+        $this->shutdown();
+        $this->sendNotify($itemsCount, $processItems);
+    }
+
+    /**
+     * Run task startup preparation jobs
+     */
+    protected function startup(): void
+    {
+        // Fill in child
+    }
+
+    /**
+     * Run task shutdown cleanup jobs
+     */
+    protected function shutdown(): void
+    {
+        // Fill in child
     }
 
     /**
