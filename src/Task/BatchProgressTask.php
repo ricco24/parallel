@@ -36,12 +36,6 @@ abstract class BatchProgressTask extends BaseTask
         $processedItems = 0;
 
         while (count($items)) {
-            // Infinity loop protection - when items() function returns more items as itemsCount()
-            if ($processedItems == $itemsCount) {
-                $this->logToFile('Infinity loop protection. Function items() returns more items as function itemsCount().', 'warning');
-                break;
-            }
-
             $itemsToProcess = [];
             foreach ($items as $item) {
                 try {
@@ -69,6 +63,11 @@ abstract class BatchProgressTask extends BaseTask
 
             $processedItems += count($itemsToProcess);
             $this->sendNotify($itemsCount, $processedItems);
+
+            // Infinity loop protection
+            if ($processedItems == $itemsCount) {
+                break;
+            }
 
             $items = $this->items($processedItems);
         }
