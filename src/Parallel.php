@@ -155,8 +155,15 @@ class Parallel
 
                     $data = [];
                     foreach (explode(';', $lastLine) as $statement) {
-                        list($var, $value) = explode(':', $statement);
-                        $data[$var] = $value;
+                        $explodedStatement = explode(':', $statement, 2);
+                        if (count($explodedStatement) != 2) {
+                            $this->logToFile($task->getSanitizedName() . ': Cannot parse statement: ' . $statement, 'error');
+                            $this->buildTaskData($taskName, [
+                                'code_errors_count' => 1
+                            ]);
+                            return;
+                        }
+                        $data[$explodedStatement[0]] = $explodedStatement[1];
                     }
 
                     $this->buildTaskData($taskName, $data);
