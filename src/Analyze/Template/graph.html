@@ -1,5 +1,5 @@
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-<div id="sankey_basic" style="width: 900px; height: 300px;"></div>
+<div id="sankey_basic" style="width: 1800px; height: 900px;"></div>
 
 <script>
     google.charts.load('current', {'packages':['sankey']});
@@ -16,8 +16,19 @@
 
         // Sets chart options.
         var options = {
-            width: '800',
-            height: '600'
+            width: '1500',
+            sankey: {
+                node: {
+                    label: {
+                        fontName: 'Times-Roman',
+                        fontSize: 12,
+                        color: '#000',
+                        bold: true,
+                        italic: false
+                    },
+                    interactivity: true
+                }
+            }
         };
 
         // Instantiates and draws our chart, passing in some options.
