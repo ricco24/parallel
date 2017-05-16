@@ -129,9 +129,12 @@ class TableOutput implements Output
     private function renderStackedTasks(Table $table, array $rows): void
     {
         foreach ($rows as $rowTitle => $row) {
+            $text = count($row->getStackedTask()->getCurrentRunAfter())
+                ? 'Waiting for: ' . implode(', ', $row->getStackedTask()->getCurrentRunAfter())
+                : '';
             $table->addRow([
                 $this->formatTitle($rowTitle, $row),
-                new TableCell('Waiting for: ' . implode(', ', $row->getStackedTask()->getCurrentRunAfter()), ['colspan' => 9])
+                new TableCell($text, ['colspan' => 9])
             ]);
         }
 
