@@ -9,7 +9,7 @@ use Parallel\TaskResult\TaskResult;
 
 class UsersTask extends BatchProgressTask
 {
-    private $itemsCount = 24;
+    private $itemsCount = 10;
 
     private $processedItems = 1;
 
@@ -19,12 +19,12 @@ class UsersTask extends BatchProgressTask
 
     protected function startup(): void
     {
-        sleep(5);
+        sleep(2);
     }
 
     protected function shutdown(): void
     {
-        sleep(5);
+        sleep(2);
     }
 
     protected function items(int $processed): iterable

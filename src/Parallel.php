@@ -2,10 +2,12 @@
 
 namespace Parallel;
 
+use Parallel\Command\AnalyzeGraphCommand;
 use Parallel\Command\RunCommand;
 use Parallel\Helper\StringHelper;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
+use Parallel\TaskStack\TaskStack;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -31,9 +33,6 @@ class Parallel
     /** @var Application */
     private $app;
 
-    /** @var Tasks */
-    private $tasks;
-
     /** @var array */
     private $data = [];
 
@@ -49,10 +48,29 @@ class Parallel
         $this->concurrent = $concurrent;
         $this->app = new Application();
         $this->app->add(new RunCommand($this));
+        $this->app->add(new AnalyzeGraphCommand($this));
 
         // Defaults
-        $this->tasks = new Tasks();
+        $this->taskStack = new TaskStack();
         $this->output = new TableOutput();
+    }
+
+    /**
+     * @param string $analyzeDir
+     * @return Parallel
+     */
+    public function setAnalyzeDir(string $analyzeDir): Parallel
+    {
+        $this->app->get('analyze:graph')->setAnalyzeDir($analyzeDir);
+        return $this;
+    }
+
+    /**
+     * @return TaskStack
+     */
+    public function getTaskStack(): TaskStack
+    {
+        return $this->taskStack;
     }
 
     /**
@@ -82,7 +100,7 @@ class Parallel
      */
     public function addTask(Task $task, $runAfter = []): Parallel
     {
-        $this->tasks->addTask($task, $runAfter);
+        $this->taskStack->addTask($task, $runAfter);
         $this->app->add($task);
         return $this;
     }
@@ -103,12 +121,13 @@ class Parallel
     {
         $start = microtime(true);
         $this->output->startMessage($output);
+        $this->taskStack->prepare();
 
         $processes = [];
-        while (!$this->tasks->isEmpty()) {
+        while (!$this->taskStack->isEmpty()) {
             foreach ($processes as $runningProcessKey => $runningProcess) {
                 if (!$runningProcess['process']->isRunning()) {
-                    $this->tasks->markDone($runningProcess['task']->getName(), $output);
+                    $this->taskStack->markDone($runningProcess['task']->getName());
                     unset($processes[$runningProcessKey]);
                 }
             }
@@ -118,8 +137,7 @@ class Parallel
                 continue;
             }
 
-            $runnableTasks = $this->tasks->getRunnableTasks($this->concurrent - count($processes));
-
+            $runnableTasks = $this->taskStack->getRunnableTasks($this->concurrent - count($processes));
             foreach ($runnableTasks as $task) {
                 $arguments = null;
                 if ($this->logDir) {
