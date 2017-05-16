@@ -9,7 +9,7 @@ use Parallel\TaskResult\TaskResult;
 
 class UsersTask extends BatchProgressTask
 {
-    private $itemsCount = 10;
+    private $itemsCount = 12;
 
     private $processedItems = 1;
 

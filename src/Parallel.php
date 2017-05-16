@@ -7,6 +7,7 @@ use Parallel\Command\RunCommand;
 use Parallel\Helper\StringHelper;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
+use Parallel\TaskStack\StackedTask;
 use Parallel\TaskStack\TaskStack;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
@@ -121,13 +122,19 @@ class Parallel
     {
         $start = microtime(true);
         $this->output->startMessage($output);
-        $this->taskStack->prepare();
+
+        // Add all tasks to tasks data array
+        foreach ($this->taskStack->getStackedTasks() as $stashedTask) {
+            $this->buildTaskData($stashedTask);
+        }
 
         $processes = [];
+        $this->taskStack->prepare();
         while (!$this->taskStack->isEmpty()) {
             foreach ($processes as $runningProcessKey => $runningProcess) {
                 if (!$runningProcess['process']->isRunning()) {
-                    $this->taskStack->markDone($runningProcess['task']->getName());
+                    $this->taskStack->markDone($runningProcess['stackedTask']->getTask()->getName());
+                    $this->moveTaskDataToBottom($runningProcess['stackedTask']);
                     unset($processes[$runningProcessKey]);
                 }
             }
@@ -137,31 +144,28 @@ class Parallel
                 continue;
             }
 
-            $runnableTasks = $this->taskStack->getRunnableTasks($this->concurrent - count($processes));
-            foreach ($runnableTasks as $task) {
+            foreach ($this->taskStack->getRunnableTasks($this->concurrent - count($processes)) as $stackedTask) {
                 $arguments = null;
                 if ($this->logDir) {
                     $arguments = '--log_dir=' . $this->logDir;
                 }
 
                 $processes[] = $process = [
-                    'process' => new Process('php ' . $this->fileName . ' ' . $task->getName() . ' ' . $arguments, $this->binDirPath, null, null, null),
-                    'task' => $task
+                    'process' => new Process('php ' . $this->fileName . ' ' . $stackedTask->getTask()->getName() . ' ' . $arguments, $this->binDirPath, null, null, null),
+                    'stackedTask' => $stackedTask
                 ];
 
-                $process['process']->start(function ($type, $buffer) use ($process, $input, $output, $task, $start) {
-                    $taskName = $process['task']->getName();
-
+                $process['process']->start(function ($type, $buffer) use ($process, $input, $output, $stackedTask, $start) {
                     // We can get multiple task line results in one buffer
                     $lines = explode("\n", trim($buffer));
 
                     if ($type === Process::ERR) {
-                        $this->buildTaskData($taskName, [
+                        $this->buildTaskData($stackedTask, [
                             'code_errors_count' => count($lines)
                         ]);
 
                         foreach ($lines as $errorLine) {
-                            $this->logToFile($task->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine), 'error');
+                            $this->logToFile($stackedTask->getTask()->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine), 'error');
                         }
 
                         $this->output->printToOutput($output, $this->data, microtime(true) - $start);
@@ -175,8 +179,8 @@ class Parallel
                     foreach (explode(';', $lastLine) as $statement) {
                         $explodedStatement = explode(':', $statement, 2);
                         if (count($explodedStatement) != 2) {
-                            $this->logToFile($task->getSanitizedName() . ': Cannot parse statement: ' . $statement, 'error');
-                            $this->buildTaskData($taskName, [
+                            $this->logToFile($stackedTask->getTask()->getSanitizedName() . ': Cannot parse statement: ' . $statement, 'error');
+                            $this->buildTaskData($stackedTask, [
                                 'code_errors_count' => 1
                             ]);
                             return;
@@ -184,27 +188,45 @@ class Parallel
                         $data[$explodedStatement[0]] = $explodedStatement[1];
                     }
 
-                    $this->buildTaskData($taskName, $data);
+                    $this->buildTaskData($stackedTask, $data);
                     $this->output->printToOutput($output, $this->data, microtime(true) - $start);
                 });
                 sleep(1);
             }
         }
 
+        $this->output->printToOutput($output, $this->data, microtime(true) - $start);
         $this->output->finishMessage($output, $this->data, microtime(true) - $start);
     }
 
     /**
-     * @param string $taskName
+     * @param StackedTask $stackedTask
      * @param array $data
      */
-    private function buildTaskData(string $taskName, array $data): void
+    private function buildTaskData(StackedTask $stackedTask, array $data = []): void
     {
-        if (!isset($this->data[$taskName])) {
-            $this->data[$taskName] = new TaskData();
+        if (!isset($this->data[$stackedTask->getTask()->getName()])) {
+            $this->data[$stackedTask->getTask()->getName()] = new TaskData($stackedTask);
         }
 
-        $this->data[$taskName]->fill($data);
+        $this->data[$stackedTask->getTask()->getName()]->fill($data);
+    }
+
+    /**
+     * Move given taskData to the bottom of data stack
+     * Used for place finished task in order they finished
+     * @param StackedTask $stackedTask
+     */
+    private function moveTaskDataToBottom(StackedTask $stackedTask)
+    {
+        $taskName = $stackedTask->getTask()->getName();
+        if (!isset($this->data[$taskName])) {
+            return;
+        }
+
+        $taskData = $this->data[$taskName];
+        unset($this->data[$taskName]);
+        $this->data[$taskName] = $taskData;
     }
 
     /**

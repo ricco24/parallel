@@ -62,6 +62,7 @@ class TaskStack
 
         // Move from running to done tasks
         $this->doneTasks[$name] = $this->runningTasks[$name];
+        $this->doneTasks[$name]->setStatus(StackedTask::STATUS_DONE);
         unset($this->runningTasks[$name]);
 
         $this->moveFromStackToRunnable();
@@ -70,7 +71,7 @@ class TaskStack
     /**
      * Get desired number of runnable tasks
      * @param int $count
-     * @return array
+     * @return StackedTask[]
      */
     public function getRunnableTasks(int $count = 1): array
     {
@@ -78,13 +79,12 @@ class TaskStack
         $runnableTasks = array_slice($this->runnableTasks, 0, $count);
         $this->runnableTasks = array_slice($this->runnableTasks, $count);
 
-        $result = [];
         foreach ($runnableTasks as $runnableTask) {
             $this->runningTasks[$runnableTask->getTask()->getName()] = $runnableTask;
-            $result[] = $runnableTask->getTask();
+            $runnableTask->setStatus(StackedTask::STATUS_RUNNING);
         }
 
-        return $result;
+        return $runnableTasks;
     }
 
     /**

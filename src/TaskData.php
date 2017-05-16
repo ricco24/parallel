@@ -3,9 +3,13 @@
 namespace Parallel;
 
 use Parallel\Helper\StringHelper;
+use Parallel\TaskStack\StackedTask;
 
 class TaskData
 {
+    /** @var StackedTask */
+    private $stackedTask;
+
     /** @var int */
     private $count = 0;
 
@@ -23,6 +27,15 @@ class TaskData
 
     /** @var array */
     private $extra = [];
+
+    /**
+     * TaskData constructor.
+     * @param StackedTask $stackedTask
+     */
+    public function __construct(StackedTask $stackedTask)
+    {
+        $this->stackedTask = $stackedTask;
+    }
 
     /**
      * @param array $data
@@ -57,6 +70,14 @@ class TaskData
         foreach ($data as $key => $value) {
             $this->extra[$key] = StringHelper::sanitize($value);
         }
+    }
+
+    /**
+     * @return StackedTask
+     */
+    public function getStackedTask(): StackedTask
+    {
+        return $this->stackedTask;
     }
 
     /**

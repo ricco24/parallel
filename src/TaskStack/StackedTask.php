@@ -3,11 +3,22 @@
 namespace Parallel\TaskStack;
 
 use Parallel\Task;
+use DateTime;
 
 class StackedTask
 {
+    const STATUS_STACKED = 'stacked';
+    const STATUS_RUNNING = 'running';
+    const STATUS_DONE = 'done';
+
     /** @var Task */
     private $task;
+
+    /** @var string */
+    private $status;
+
+    /** @var DateTime|null */
+    private $finishedAt;
 
     /** @var array */
     private $runAfter = [];
@@ -23,6 +34,21 @@ class StackedTask
     {
         $this->task = $task;
         $this->runAfter = $this->currentRunAfter = array_combine($runAfter, $runAfter);
+        $this->status = self::STATUS_STACKED;
+    }
+
+    /**
+     * @param string $status
+     * @return StackedTask
+     */
+    public function setStatus(string $status): StackedTask
+    {
+        $this->status = $status;
+        if ($this->status === self::STATUS_DONE) {
+            $this->finishedAt = new DateTime();
+        }
+
+        return $this;
     }
 
     /**
@@ -50,6 +76,14 @@ class StackedTask
     }
 
     /**
+     * @return DateTime|null
+     */
+    public function getFinishedAt(): ?DateTime
+    {
+        return $this->finishedAt;
+    }
+
+    /**
      * Some task is done, so remove from run after
      * @param string $taskName
      */
@@ -58,6 +92,16 @@ class StackedTask
         if (isset($this->currentRunAfter[$taskName])) {
             unset($this->currentRunAfter[$taskName]);
         }
+    }
+
+    /**
+     * Check if task is in some status
+     * @param string $status
+     * @return bool
+     */
+    public function isInStatus(string $status): bool
+    {
+        return $this->status == $status;
     }
 
     /**

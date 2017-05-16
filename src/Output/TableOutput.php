@@ -4,7 +4,10 @@ namespace Parallel\Output;
 
 use Parallel\Helper\TimeHelper;
 use Parallel\TaskData;
+use Parallel\TaskStack\StackedTask;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
+use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\Table as TableHelper;
@@ -38,7 +41,7 @@ class TableOutput implements Output
      */
     public function finishMessage(OutputInterface $output, array $data, float $duration): void
     {
-        $output->writeln("\nDuration => " . number_format($duration, 2) . " sec");
+        $output->writeln('');
     }
 
     /**
@@ -62,8 +65,9 @@ class TableOutput implements Output
         $output->getFormatter()->setStyle('green', new OutputFormatterStyle('green'));
         $output->getFormatter()->setStyle('yellow', new OutputFormatterStyle('yellow'));
 
-        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Duration', 'Estimated', 'Message'];
+        list($stacked, $running, $done) = $this->filterTasks($data);
 
+        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Duration', 'Estimated', 'Message'];
         $table = new TableHelper($output);
         $table
             ->setHeaders($headers);
@@ -76,7 +80,74 @@ class TableOutput implements Output
             'code_errors' => 0,
             'duration' => 0
         ];
-        foreach ($data as $rowTitle => $row) {
+
+        $this->renderStackedTasks($table, $stacked);
+        $this->renderDoneTasks($table, $done, $total);
+        $this->renderRunningTasks($table, $running, $total);
+
+        $table->addRow([
+            'Total',
+            number_format($total['count']),
+            number_format($total['success']),
+            number_format($total['skip']),
+            number_format($total['error']),
+            number_format($total['code_errors']),
+            'Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime),
+            TimeHelper::formatTime($elapsedTime),
+            '',
+            ''
+        ]);
+
+        $table->render();
+    }
+
+    /**
+     * Filter tasks array
+     * @param array $data
+     * @return array
+     */
+    private function filterTasks(array $data): array
+    {
+        $done = $stacked = $running = [];
+        foreach ($data as $taskTitle => $taskData) {
+            if ($taskData->getStackedTask()->isInStatus(StackedTask::STATUS_DONE)) {
+                $done[$taskTitle] = $taskData;
+            } elseif ($taskData->getStackedTask()->isInStatus(StackedTask::STATUS_STACKED)) {
+                $stacked[$taskTitle] = $taskData;
+            } elseif ($taskData->getStackedTask()->isInStatus(StackedTask::STATUS_RUNNING)) {
+                $running[$taskTitle] = $taskData;
+            }
+        }
+
+        return [$stacked, $running, $done];
+    }
+
+    /**
+     * @param TableHelper $table
+     * @param array $rows
+     */
+    private function renderStackedTasks(Table $table, array $rows): void
+    {
+        foreach ($rows as $rowTitle => $row) {
+            $table->addRow([
+                $this->formatTitle($rowTitle, $row),
+                new TableCell('Waiting for: ' . implode(', ', $row->getStackedTask()->getCurrentRunAfter()), ['colspan' => 9])
+            ]);
+        }
+
+        if (count($rows)) {
+            $table->addRow(new TableSeparator());
+        }
+    }
+
+    /**
+     * @param TableHelper $table
+     * @param array $rows
+     * @param array $total
+     */
+    private function renderRunningTasks(Table $table, array $rows, array &$total): void
+    {
+        foreach ($rows as $rowTitle => $row) {
             $table->addRow([
                 $this->formatTitle($rowTitle, $row),
                 number_format($row->getCount()),
@@ -98,21 +169,38 @@ class TableOutput implements Output
             $total['duration'] += $row->getDuration();
         }
 
-        $table->addRow(new TableSeparator());
-        $table->addRow([
-            'Total',
-            number_format($total['count']),
-            number_format($total['success']),
-            number_format($total['skip']),
-            number_format($total['error']),
-            number_format($total['code_errors']),
-            'Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime),
-            TimeHelper::formatTime($elapsedTime),
-            '',
-            ''
-        ]);
+        if (count($rows)) {
+            $table->addRow(new TableSeparator());
+        }
+    }
 
-        $table->render();
+    private function renderDoneTasks(Table $table, array $rows, array &$total): void
+    {
+        foreach ($rows as $rowTitle => $row) {
+            $table->addRow([
+                $this->formatTitle($rowTitle, $row),
+                number_format($row->getCount()),
+                number_format($row->getExtra('success', 0)),
+                number_format($row->getExtra('skip', 0)),
+                number_format($row->getExtra('error', 0)),
+                number_format($row->getCodeErrorsCount()),
+                $this->progress($row->getProgress()),
+                TimeHelper::formatTime($row->getDuration()),
+                TimeHelper::formatTime($row->getEstimated()),
+                $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : ''
+            ]);
+
+            $total['count'] += $row->getCount();
+            $total['success'] += $row->getExtra('success', 0);
+            $total['skip'] += $row->getExtra('skip', 0);
+            $total['error'] += $row->getExtra('error', 0);
+            $total['code_errors'] += $row->getCodeErrorsCount();
+            $total['duration'] += $row->getDuration();
+        }
+
+        if (count($rows)) {
+            $table->addRow(new TableSeparator());
+        }
     }
 
     /**
@@ -153,7 +241,7 @@ class TableOutput implements Output
      */
     private function formatTitle(string $rowTitle, TaskData $row): string
     {
-        if ($row->getProgress() != 100) {
+        if (!$row->getStackedTask()->isInStatus(StackedTask::STATUS_DONE)) {
             return "\xF0\x9F\x95\x92 " . $rowTitle;
         }
 
