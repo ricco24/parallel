@@ -83,7 +83,9 @@ abstract class Task extends Command
             'count' => $count,
             'current' => $current,
             'duration' => $this->duration(),
-            'estimated' => $this->estimated($count, $current)
+            'estimated' => $this->estimated($count, $current),
+            'memory_usage' => memory_get_usage(true),
+            'memory_peak' => memory_get_peak_usage(true)
         ]));
     }
 

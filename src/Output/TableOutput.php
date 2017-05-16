@@ -2,6 +2,7 @@
 
 namespace Parallel\Output;
 
+use Parallel\Helper\DataHelper;
 use Parallel\Helper\TimeHelper;
 use Parallel\TaskData;
 use Parallel\TaskStack\StackedTask;
@@ -67,7 +68,7 @@ class TableOutput implements Output
 
         list($stacked, $running, $done) = $this->filterTasks($data);
 
-        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Duration', 'Estimated', 'Message'];
+        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Duration', 'Estimated', 'Memory', 'Message'];
         $table = new TableHelper($output);
         $table
             ->setHeaders($headers);
@@ -94,6 +95,7 @@ class TableOutput implements Output
             number_format($total['code_errors']),
             'Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime),
             TimeHelper::formatTime($elapsedTime),
+            '',
             '',
             ''
         ]);
@@ -134,7 +136,7 @@ class TableOutput implements Output
                 : '';
             $table->addRow([
                 $this->formatTitle($rowTitle, $row),
-                new TableCell($text, ['colspan' => 9])
+                new TableCell($text, ['colspan' => 10])
             ]);
         }
 
@@ -161,6 +163,7 @@ class TableOutput implements Output
                 $this->progress($row->getProgress()),
                 TimeHelper::formatTime($row->getDuration()),
                 TimeHelper::formatTime($row->getEstimated()),
+                DataHelper::convertBytes($row->getMemoryUsage()) . ' / ' . DataHelper::convertBytes($row->getMemoryPeak()),
                 $row->getExtra('message', '')
             ]);
 
@@ -190,6 +193,7 @@ class TableOutput implements Output
                 $this->progress($row->getProgress()),
                 TimeHelper::formatTime($row->getDuration()),
                 TimeHelper::formatTime($row->getEstimated()),
+                DataHelper::convertBytes($row->getMemoryUsage()) . ' / ' . DataHelper::convertBytes($row->getMemoryPeak()),
                 $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : ''
             ]);
 

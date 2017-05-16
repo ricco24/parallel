@@ -23,6 +23,12 @@ class TaskData
     private $estimated = 0.0;
 
     /** @var int */
+    private $memoryUsage = 0;
+
+    /** @var int */
+    private $memoryPeak = 0;
+
+    /** @var int */
     private $codeErrorsCount = 0;
 
     /** @var array */
@@ -60,6 +66,16 @@ class TaskData
         if (isset($data['estimated'])) {
             $this->estimated = (float) $data['estimated'];
             unset($data['estimated']);
+        }
+
+        if (isset($data['memory_usage'])) {
+            $this->memoryUsage = (int) $data['memory_usage'];
+            unset($data['memory_usage']);
+        }
+
+        if (isset($data['memory_peak'])) {
+            $this->memoryPeak = (int) $data['memory_peak'];
+            unset($data['memory_peak']);
         }
 
         if (isset($data['code_errors_count'])) {
@@ -126,6 +142,22 @@ class TaskData
     public function getProgress(): float
     {
         return $this->count ? $this->current / $this->count * 100 : 0;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMemoryUsage(): int
+    {
+        return $this->memoryUsage;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMemoryPeak(): int
+    {
+        return $this->memoryPeak;
     }
 
     /**
