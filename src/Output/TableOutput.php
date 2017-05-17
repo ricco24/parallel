@@ -8,7 +8,6 @@ use Parallel\TaskData;
 use Parallel\TaskStack\StackedTask;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Helper\Table;
-use Symfony\Component\Console\Helper\TableCell;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\Table as TableHelper;
@@ -31,8 +30,15 @@ class TableOutput implements Output
      */
     public function printToOutput(OutputInterface $output, array $data, float $elapsedTime): void
     {
+        $output->getFormatter()->setStyle('red', new OutputFormatterStyle('red'));
+        $output->getFormatter()->setStyle('green', new OutputFormatterStyle('green'));
+        $output->getFormatter()->setStyle('yellow', new OutputFormatterStyle('yellow'));
+
         $this->clearScreen($output);
-        $this->printTable($output, $data, $elapsedTime);
+
+        list($stacked, $running, $done) = $this->filterTasks($data);
+        $this->renderStackedTable($output, $stacked, $running);
+        $this->renderMainTable($output, $data, $running, $done, $elapsedTime);
     }
 
     /**
@@ -57,18 +63,51 @@ class TableOutput implements Output
 
     /**
      * @param OutputInterface $output
-     * @param array $data
+     * @param array $stacked
+     * @param array $running
+     */
+    private function renderStackedTable(OutputInterface $output, array $stacked, array $running): void
+    {
+        if (!count($stacked)) {
+            return;
+        }
+
+        $headers = ['Title', 'Waiting for'];
+        $table = new TableHelper($output);
+        $table
+            ->setHeaders($headers);
+
+        foreach ($stacked as $rowTitle => $row) {
+            // Mark currently running tasks
+            $waitingFor = [];
+            foreach ($row->getStackedTask()->getCurrentRunAfter() as $runAfter) {
+                if (in_array($runAfter, array_keys($running))) {
+                    $waitingFor[] = '<green>' . $runAfter . '</green>';
+                    continue;
+                }
+                $waitingFor[] = $runAfter;
+            }
+
+            $table->addRow([
+                $this->formatTitle($rowTitle, $row),
+                implode(' <yellow>|</yellow> ', $waitingFor)
+            ]);
+        }
+
+        $table->render();
+    }
+
+    /**
+     * @param OutputInterface $output
+     * @param array $all
+     * @param array $running
+     * @param array $done
      * @param float $elapsedTime
      */
-    private function printTable(OutputInterface $output, array $data, float $elapsedTime): void
+    private function renderMainTable(OutputInterface $output, array $all, array $running, array $done, float $elapsedTime): void
     {
-        $output->getFormatter()->setStyle('red', new OutputFormatterStyle('red'));
-        $output->getFormatter()->setStyle('green', new OutputFormatterStyle('green'));
-        $output->getFormatter()->setStyle('yellow', new OutputFormatterStyle('yellow'));
 
-        list($stacked, $running, $done) = $this->filterTasks($data);
-
-        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Duration', 'Estimated', 'Memory', 'Message'];
+        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Time', 'Memory', 'Message'];
         $table = new TableHelper($output);
         $table
             ->setHeaders($headers);
@@ -82,12 +121,12 @@ class TableOutput implements Output
             'duration' => 0
         ];
 
-        $this->renderStackedTasks($table, $stacked);
-        $this->renderDoneTasks($table, $done, $total);
-        $this->renderRunningTasks($table, $running, $total);
+        $maxMemoryUsage = $this->getMaxMemoryPeak(array_merge($running, $done));
+        $this->renderDoneTasks($table, $done, $maxMemoryUsage, $total);
+        $this->renderRunningTasks($table, $running, $maxMemoryUsage, $total);
 
         $table->addRow([
-            'Total',
+            'Total (' . count($done) . '/' . count($all) . ')',
             number_format($total['count']),
             number_format($total['success']),
             number_format($total['skip']),
@@ -95,7 +134,6 @@ class TableOutput implements Output
             number_format($total['code_errors']),
             'Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime),
             TimeHelper::formatTime($elapsedTime),
-            '',
             '',
             ''
         ]);
@@ -127,30 +165,10 @@ class TableOutput implements Output
     /**
      * @param TableHelper $table
      * @param array $rows
-     */
-    private function renderStackedTasks(Table $table, array $rows): void
-    {
-        foreach ($rows as $rowTitle => $row) {
-            $text = count($row->getStackedTask()->getCurrentRunAfter())
-                ? 'Waiting for: ' . implode(', ', $row->getStackedTask()->getCurrentRunAfter())
-                : '';
-            $table->addRow([
-                $this->formatTitle($rowTitle, $row),
-                new TableCell($text, ['colspan' => 10])
-            ]);
-        }
-
-        if (count($rows)) {
-            $table->addRow(new TableSeparator());
-        }
-    }
-
-    /**
-     * @param TableHelper $table
-     * @param array $rows
+     * @param int $maxMemoryUsage
      * @param array $total
      */
-    private function renderRunningTasks(Table $table, array $rows, array &$total): void
+    private function renderRunningTasks(Table $table, array $rows, int $maxMemoryUsage, array &$total): void
     {
         foreach ($rows as $rowTitle => $row) {
             $table->addRow([
@@ -161,9 +179,8 @@ class TableOutput implements Output
                 number_format($row->getExtra('error', 0)),
                 number_format($row->getCodeErrorsCount()),
                 $this->progress($row->getProgress()),
-                TimeHelper::formatTime($row->getDuration()),
-                TimeHelper::formatTime($row->getEstimated()),
-                DataHelper::convertBytes($row->getMemoryUsage()) . ' / ' . DataHelper::convertBytes($row->getMemoryPeak()),
+                TimeHelper::formatTime($row->getDuration()) . ' / ' . TimeHelper::formatTime($row->getEstimated()),
+                $this->formatMemory($row, $maxMemoryUsage),
                 $row->getExtra('message', '')
             ]);
 
@@ -180,7 +197,13 @@ class TableOutput implements Output
         }
     }
 
-    private function renderDoneTasks(Table $table, array $rows, array &$total): void
+    /**
+     * @param TableHelper $table
+     * @param array $rows
+     * @param int $maxMemoryUsage
+     * @param array $total
+     */
+    private function renderDoneTasks(Table $table, array $rows, int $maxMemoryUsage, array &$total): void
     {
         foreach ($rows as $rowTitle => $row) {
             $table->addRow([
@@ -192,8 +215,7 @@ class TableOutput implements Output
                 number_format($row->getCodeErrorsCount()),
                 $this->progress($row->getProgress()),
                 TimeHelper::formatTime($row->getDuration()),
-                TimeHelper::formatTime($row->getEstimated()),
-                DataHelper::convertBytes($row->getMemoryUsage()) . ' / ' . DataHelper::convertBytes($row->getMemoryPeak()),
+                $this->formatMemory($row, $maxMemoryUsage),
                 $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : ''
             ]);
 
@@ -265,5 +287,39 @@ class TableOutput implements Output
         }
 
         return $rowTitle;
+    }
+
+    /**
+     * @param TaskData $taskData
+     * @param int $maxMemory
+     * @return string
+     */
+    private function formatMemory(TaskData $taskData, int $maxMemory): string
+    {
+        $memoryIndex = $taskData->getMemoryPeak()/$maxMemory;
+        $text = DataHelper::convertBytes($taskData->getMemoryUsage()) . ' (' . DataHelper::convertBytes($taskData->getMemoryPeak()) . ')';
+
+        if ($memoryIndex >= 0.75) {
+            return "<red>$text</red>";
+        } elseif ($memoryIndex >= 0.5) {
+            return "<yellow>$text</yellow>";
+        }
+
+        return "<green>$text</green>";
+    }
+
+    /**
+     * @param TaskData[] $data
+     * @return int
+     */
+    private function getMaxMemoryPeak(array $data): int
+    {
+        $max = 0;
+        foreach ($data as $taskData) {
+            if ($taskData->getMemoryPeak() > $max) {
+                $max = $taskData->getMemoryPeak();
+            }
+        }
+        return $max;
     }
 }
