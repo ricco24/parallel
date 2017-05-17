@@ -68,6 +68,10 @@ class TableOutput implements Output
      */
     private function renderStackedTable(OutputInterface $output, array $stacked, array $running): void
     {
+        if (!$output->isDebug()) {
+            return;
+        }
+
         if (!count($stacked)) {
             return;
         }
