@@ -121,9 +121,9 @@ class TableOutput implements Output
             'duration' => 0
         ];
 
-        $maxMemoryUsage = $this->getMaxMemoryPeak(array_merge($running, $done));
-        $this->renderDoneTasks($table, $done, $maxMemoryUsage, $total);
-        $this->renderRunningTasks($table, $running, $maxMemoryUsage, $total);
+        $avgMemoryUsage = $this->getAvgMemoryUsage(array_merge($running, $done));
+        $this->renderDoneTasks($table, $done, $avgMemoryUsage, $total);
+        $this->renderRunningTasks($table, $running, $avgMemoryUsage, $total);
 
         $table->addRow([
             'Total (' . count($done) . '/' . count($all) . ')',
@@ -165,10 +165,10 @@ class TableOutput implements Output
     /**
      * @param TableHelper $table
      * @param array $rows
-     * @param int $maxMemoryUsage
+     * @param int $avgMemoryUsage
      * @param array $total
      */
-    private function renderRunningTasks(Table $table, array $rows, int $maxMemoryUsage, array &$total): void
+    private function renderRunningTasks(Table $table, array $rows, int $avgMemoryUsage, array &$total): void
     {
         foreach ($rows as $rowTitle => $row) {
             $table->addRow([
@@ -180,7 +180,7 @@ class TableOutput implements Output
                 number_format($row->getCodeErrorsCount()),
                 $this->progress($row->getProgress()),
                 TimeHelper::formatTime($row->getDuration()) . ' / ' . TimeHelper::formatTime($row->getEstimated()),
-                $this->formatMemory($row, $maxMemoryUsage),
+                $this->formatMemory($row, $avgMemoryUsage),
                 $row->getExtra('message', '')
             ]);
 
@@ -200,10 +200,10 @@ class TableOutput implements Output
     /**
      * @param TableHelper $table
      * @param array $rows
-     * @param int $maxMemoryUsage
+     * @param int $avgMemoryUsage
      * @param array $total
      */
-    private function renderDoneTasks(Table $table, array $rows, int $maxMemoryUsage, array &$total): void
+    private function renderDoneTasks(Table $table, array $rows, int $avgMemoryUsage, array &$total): void
     {
         foreach ($rows as $rowTitle => $row) {
             $table->addRow([
@@ -215,7 +215,7 @@ class TableOutput implements Output
                 number_format($row->getCodeErrorsCount()),
                 $this->progress($row->getProgress()),
                 TimeHelper::formatTime($row->getDuration()),
-                $this->formatMemory($row, $maxMemoryUsage),
+                $this->formatMemory($row, $avgMemoryUsage),
                 $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : ''
             ]);
 
@@ -299,27 +299,27 @@ class TableOutput implements Output
         $memoryIndex = $taskData->getMemoryPeak()/$maxMemory;
         $text = DataHelper::convertBytes($taskData->getMemoryUsage()) . ' (' . DataHelper::convertBytes($taskData->getMemoryPeak()) . ')';
 
-        if ($memoryIndex >= 0.75) {
+        if ($memoryIndex > 3) {
             return "<red>$text</red>";
-        } elseif ($memoryIndex >= 0.5) {
+        } elseif ($memoryIndex > 2) {
             return "<yellow>$text</yellow>";
         }
 
-        return "<green>$text</green>";
+        return "$text";
     }
 
     /**
      * @param TaskData[] $data
      * @return int
      */
-    private function getMaxMemoryPeak(array $data): int
+    private function getAvgMemoryUsage(array $data): int
     {
-        $max = 0;
+        $memory = 0;
+        $count = 0;
         foreach ($data as $taskData) {
-            if ($taskData->getMemoryPeak() > $max) {
-                $max = $taskData->getMemoryPeak();
-            }
+            $memory += $taskData->getMemoryPeak();
+            $count++;
         }
-        return $max;
+        return $memory/$count;
     }
 }
