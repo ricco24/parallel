@@ -136,6 +136,9 @@ class Parallel
                     $this->taskStack->markDone($runningProcess['stackedTask']->getTask()->getName());
                     $this->moveTaskDataToBottom($runningProcess['stackedTask']);
                     unset($processes[$runningProcessKey]);
+
+                    // Redraw output when task finished
+                    $this->output->printToOutput($output, $this->data, microtime(true) - $start);
                 }
             }
 
