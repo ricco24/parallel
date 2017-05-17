@@ -133,7 +133,7 @@ abstract class Task extends Command
      */
     protected function logTaskResultToFile(TaskResult $taskResult): void
     {
-        if ($taskResult instanceof SkipResult) {
+        if (($taskResult instanceof SkipResult) && !empty($taskResult->getMessage())) {
             $this->logToFile($taskResult->getMessage(), 'skip');
         } else if ($taskResult instanceof ErrorResult) {
             $this->logToFile($taskResult->getMessage(), 'error');
