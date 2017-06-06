@@ -324,6 +324,11 @@ class TableOutput implements Output
             $memory += $taskData->getMemoryPeak();
             $count++;
         }
-        return $memory/$count;
+
+        if ($count === 0) {
+            return 0;
+        }
+
+        return (int) $memory/$count;
     }
 }
