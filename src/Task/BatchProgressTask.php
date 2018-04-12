@@ -37,7 +37,7 @@ abstract class BatchProgressTask extends BaseTask
 
         while (count($items)) {
             $itemsToProcess = [];
-            foreach ($items as $item) {
+            foreach ($items as $key => $item) {
                 try {
                     $taskResult = $this->processItem($item);
                 } catch (Throwable $e) {
@@ -46,7 +46,7 @@ abstract class BatchProgressTask extends BaseTask
 
                 $this->logTaskResultToFile($taskResult);
                 if ($taskResult instanceof SuccessResult) {
-                    $itemsToProcess[] = $taskResult->getData();
+                    $itemsToProcess[$key] = $taskResult->getData();
                 } else {
                     $this->processResult($taskResult);
                     $processedItems++;

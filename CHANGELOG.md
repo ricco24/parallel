@@ -2,6 +2,9 @@
 
 ## [Unreleased][unreleased]
 
+- Added keys to items in BatchProgressTask
+- Updated symfony dependencies
+
 ## 1.0.0 - 2016-06-06
 - First tagged version
 
