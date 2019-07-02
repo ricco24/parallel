@@ -96,6 +96,7 @@ class Parallel
      */
     public function addTask(Task $task, $runAfter = []): Parallel
     {
+        $task->setLogger($this->logger);
         $this->taskStack->addTask($task, $runAfter);
         $this->app->add($task);
         return $this;

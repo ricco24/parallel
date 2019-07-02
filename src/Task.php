@@ -8,7 +8,7 @@ use Parallel\TaskResult\BaseTaskResult;
 use Parallel\TaskResult\ErrorResult;
 use Parallel\TaskResult\SkipResult;
 use Parallel\TaskResult\TaskResult;
-use Psr\Log\LoggerInterface;
+use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -18,7 +18,7 @@ use Throwable;
 
 abstract class Task extends Command
 {
-    protected $logger;
+    use LoggerAwareTrait;
 
     /** @var float */
     private $startTime = 0.0;
@@ -29,10 +29,13 @@ abstract class Task extends Command
     /** @var OutputInterface */
     private $output;
 
-    public function __construct(string $name = null, LoggerInterface $logger = null)
+    /**
+     * @param string|null $name
+     */
+    public function __construct(string $name = null)
     {
         parent::__construct($name);
-        $this->logger = $logger ?? new NullLogger();
+        $this->logger = new NullLogger();
     }
 
     /**
