@@ -37,7 +37,7 @@ abstract class ProgressTask extends BaseTask
             try {
                 $taskResult = $this->processItem($item);
             } catch (Throwable $e) {
-                $taskResult = new ErrorResult($e->getMessage());
+                $taskResult = new ErrorResult($e->getMessage(), $e);
             }
 
             $this->processResult($taskResult);

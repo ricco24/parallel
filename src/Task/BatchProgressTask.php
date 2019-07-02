@@ -41,7 +41,7 @@ abstract class BatchProgressTask extends BaseTask
                 try {
                     $taskResult = $this->processItem($item);
                 } catch (Throwable $e) {
-                    $taskResult = new ErrorResult($e->getMessage());
+                    $taskResult = new ErrorResult($e->getMessage(), $e);
                 }
 
                 $this->logTaskResultToFile($taskResult);
@@ -57,7 +57,9 @@ abstract class BatchProgressTask extends BaseTask
                 $this->batch($itemsToProcess);
                 $this->success += count($itemsToProcess);
             } catch (Throwable $e) {
-                $this->logToFile($e->getMessage(), 'error');
+                $this->logger->error($e->getMessage(), array_merge($this->getLogContext(), [
+                    'exception' => $e
+                ]));
                 $this->error += count($itemsToProcess);
             }
 
