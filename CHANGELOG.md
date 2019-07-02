@@ -2,6 +2,9 @@
 
 ## [Unreleased][unreleased]
 
+### Changed
+- Custom log replaced with PSR log interfaces
+
 ### Fixed
 - TableOutput show minimal saved time as 0
 

@@ -9,6 +9,8 @@ use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
 use Parallel\TaskStack\StackedTask;
 use Parallel\TaskStack\TaskStack;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -16,6 +18,8 @@ use Symfony\Component\Process\Process;
 
 class Parallel
 {
+    use LoggerAwareTrait;
+
     /** @var string */
     private $binDirPath;
 
@@ -25,9 +29,7 @@ class Parallel
     /** @var int */
     private $concurrent;
 
-    /** @var string */
-    private $logDir;
-
+    /** @var TaskStack */
     private $taskStack;
 
     /** @var Output */
@@ -49,6 +51,7 @@ class Parallel
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
         $this->concurrent = $concurrent;
+        $this->logger = new NullLogger();
         $this->app = new Application();
         $this->app->add(new RunCommand($this));
         $this->app->add(new AnalyzeGraphCommand($this));
@@ -87,22 +90,13 @@ class Parallel
     }
 
     /**
-     * @param string $logDir
-     * @return Parallel
-     */
-    public function setLogDir(string $logDir): Parallel
-    {
-        $this->logDir = $logDir;
-        return $this;
-    }
-
-    /**
      * @param Task $task
      * @param array $runAfter
      * @return Parallel
      */
     public function addTask(Task $task, $runAfter = []): Parallel
     {
+        $task->setLogger($this->logger);
         $this->taskStack->addTask($task, $runAfter);
         $this->app->add($task);
         return $this;
@@ -150,13 +144,8 @@ class Parallel
             }
 
             foreach ($this->taskStack->getRunnableTasks($this->concurrent - count($processes)) as $stackedTask) {
-                $arguments = null;
-                if ($this->logDir) {
-                    $arguments = '--log_dir=' . $this->logDir;
-                }
-
                 $processes[] = $process = [
-                    'process' => new Process('php ' . $this->fileName . ' ' . $stackedTask->getTask()->getName() . ' ' . $arguments, $this->binDirPath, null, null, null),
+                    'process' => new Process('php ' . $this->fileName . ' ' . $stackedTask->getTask()->getName(), $this->binDirPath, null, null, null),
                     'stackedTask' => $stackedTask
                 ];
 
@@ -170,7 +159,7 @@ class Parallel
                         ]);
 
                         foreach ($lines as $errorLine) {
-                            $this->logToFile($stackedTask->getTask()->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine), 'error');
+                            $this->logger->error($stackedTask->getTask()->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine));
                         }
 
                         $this->output->printToOutput($output, $this->data, microtime(true) - $start);
@@ -184,7 +173,7 @@ class Parallel
                     foreach (explode(';', $lastLine) as $statement) {
                         $explodedStatement = explode(':', $statement, 2);
                         if (count($explodedStatement) != 2) {
-                            $this->logToFile($stackedTask->getTask()->getSanitizedName() . ': Cannot parse statement: ' . $statement, 'error');
+                            $this->logger->error($stackedTask->getTask()->getSanitizedName() . ': Cannot parse statement: ' . $statement);
                             $this->buildTaskData($stackedTask, [
                                 'code_errors_count' => 1
                             ]);
@@ -232,18 +221,5 @@ class Parallel
         $taskData = $this->data[$taskName];
         unset($this->data[$taskName]);
         $this->data[$taskName] = $taskData;
-    }
-
-    /**
-     * @param string $line
-     * @param string $type
-     */
-    protected function logToFile(string $line, string $type): void
-    {
-        if (!$this->logDir) {
-            return;
-        }
-
-        file_put_contents($this->logDir . '/parallel_' . $type, "\n[" . date('d.m.Y H:i:s') . ']: ' . $line, FILE_APPEND);
     }
 }

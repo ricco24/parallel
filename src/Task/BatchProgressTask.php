@@ -29,7 +29,11 @@ abstract class BatchProgressTask extends BaseTask
      */
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
-        $this->launchStartup();
+        try {
+            $this->launchStartup();
+        } catch (Throwable $e) {
+            return new ErrorResult($e->getMessage(), $e);
+        }
 
         $items = $this->items(0);
         $itemsCount = $this->itemsCount();
@@ -41,7 +45,7 @@ abstract class BatchProgressTask extends BaseTask
                 try {
                     $taskResult = $this->processItem($item);
                 } catch (Throwable $e) {
-                    $taskResult = new ErrorResult($e->getMessage());
+                    $taskResult = new ErrorResult($e->getMessage(), $e);
                 }
 
                 $this->logTaskResultToFile($taskResult);
@@ -57,7 +61,9 @@ abstract class BatchProgressTask extends BaseTask
                 $this->batch($itemsToProcess);
                 $this->success += count($itemsToProcess);
             } catch (Throwable $e) {
-                $this->logToFile($e->getMessage(), 'error');
+                $this->logger->error($e->getMessage(), array_merge($this->getLogContext(), [
+                    'exception' => $e
+                ]));
                 $this->error += count($itemsToProcess);
             }
 
@@ -72,7 +78,11 @@ abstract class BatchProgressTask extends BaseTask
             $items = $this->items($processedItems);
         }
 
-        $this->launchShutdown($itemsCount, $processedItems);
+        try {
+            $this->launchShutdown($itemsCount, $processedItems);
+        } catch (Throwable $e) {
+            return new ErrorResult($e->getMessage(), $e);
+        }
 
         return new SuccessResult();
     }
