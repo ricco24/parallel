@@ -20,7 +20,7 @@ class TableOutput implements Output
      */
     public function startMessage(OutputInterface $output): void
     {
-        $output->writeln('Starting import ...');
+        $output->writeln('Starting parallel task processing ...');
     }
 
     /**
@@ -136,7 +136,7 @@ class TableOutput implements Output
             number_format($total['skip']),
             number_format($total['error']),
             number_format($total['code_errors']),
-            'Saved time: ' . TimeHelper::formatTime($total['duration'] - (int) $elapsedTime),
+            'Saved time: ' . TimeHelper::formatTime(max($total['duration'] - (int) $elapsedTime, 0)),
             TimeHelper::formatTime($elapsedTime),
             '',
             ''

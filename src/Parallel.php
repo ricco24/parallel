@@ -28,6 +28,8 @@ class Parallel
     /** @var string */
     private $logDir;
 
+    private $taskStack;
+
     /** @var Output */
     private $output;
 
