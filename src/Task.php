@@ -117,7 +117,6 @@ abstract class Task extends Command
     {
         $this->output = $output;
         $this->taskOutput = new BaseTaskOutput();
-        $this->logDir = $input->getOption('log_dir') ? rtrim($input->getOption('log_dir'), '/') : '';
         $this->start();
 
         try {

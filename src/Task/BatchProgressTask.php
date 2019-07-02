@@ -29,7 +29,11 @@ abstract class BatchProgressTask extends BaseTask
      */
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
-        $this->launchStartup();
+        try {
+            $this->launchStartup();
+        } catch (Throwable $e) {
+            return new ErrorResult($e->getMessage(), $e);
+        }
 
         $items = $this->items(0);
         $itemsCount = $this->itemsCount();
@@ -74,7 +78,11 @@ abstract class BatchProgressTask extends BaseTask
             $items = $this->items($processedItems);
         }
 
-        $this->launchShutdown($itemsCount, $processedItems);
+        try {
+            $this->launchShutdown($itemsCount, $processedItems);
+        } catch (Throwable $e) {
+            return new ErrorResult($e->getMessage(), $e);
+        }
 
         return new SuccessResult();
     }
