@@ -275,19 +275,19 @@ class TableOutput implements Output
     private function formatTitle(string $rowTitle, TaskData $row): string
     {
         if (!$row->getStackedTask()->isInStatus(StackedTask::STATUS_DONE)) {
-            return "\xF0\x9F\x95\x92 " . $rowTitle;
+            return $rowTitle;
         }
 
         if ($row->getExtra('error', 0) != 0) {
-            return $this->tag('red', "\xF0\x9F\x97\xB4 " . $rowTitle);
+            return $this->tag('red', "\xE2\x9C\x96 " . $rowTitle);
         }
 
         if ($row->getCodeErrorsCount() != 0) {
-            return $this->tag('yellow', "\xF0\x9F\x97\xB2 " . $rowTitle);
+            return $this->tag('yellow', "\xE2\x9C\x96 " . $rowTitle);
         }
 
         if ($row->getExtra('success', 0) + $row->getExtra('skip', 0) == $row->getCount()) {
-            return $this->tag('green', "\xF0\x9F\x97\xB8 " . $rowTitle);
+            return $this->tag('green', "\xE2\x9C\x94 " . $rowTitle);
         }
 
         return $rowTitle;

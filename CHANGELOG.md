@@ -7,6 +7,7 @@
 
 ### Fixed
 - TableOutput show minimal saved time as 0
+- Icons fix
 
 ## 1.0.0 - 2016-06-06
 - First tagged version
