@@ -88,13 +88,13 @@ class TaskStack
 
             // Check if any running task reach max concurrent task count
             foreach ($this->runningTasks as $runningTask) {
-                if ($runningTask->getMaxConcurrentTasksCount() !== null && ($runningTask->getMaxConcurrentTasksCount() <= $currentTasksRunningCount + count($runnableTasks))) {
+                if ($runningTask->getMaxConcurrentTasksCount() !== null && ($runningTask->getMaxConcurrentTasksCount() < $currentTasksRunningCount + count($runnableTasks))) {
                     break 2;
                 }
             }
 
             // Check if selected runnable task reach max concurrent task count
-            if ($task->getMaxConcurrentTasksCount() !== null && ($task->getMaxConcurrentTasksCount() > $currentTasksRunningCount + count($runnableTasks))) {
+            if ($task->getMaxConcurrentTasksCount() !== null && ($task->getMaxConcurrentTasksCount() < $currentTasksRunningCount + count($runnableTasks))) {
                 continue;
             }
 
