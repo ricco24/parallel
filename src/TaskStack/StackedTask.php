@@ -20,6 +20,9 @@ class StackedTask
     /** @var DateTime|null */
     private $finishedAt;
 
+    /** @var DateTime|null */
+    private $startAt;
+
     /** @var array */
     private $runAfter = [];
 
@@ -53,6 +56,9 @@ class StackedTask
     public function setStatus(string $status): StackedTask
     {
         $this->status = $status;
+        if ($this->status === self::STATUS_RUNNING) {
+            $this->startAt = new DateTime();
+        }
         if ($this->status === self::STATUS_DONE) {
             $this->finishedAt = new DateTime();
         }
@@ -82,6 +88,14 @@ class StackedTask
     public function getCurrentRunAfter(): array
     {
         return $this->currentRunAfter;
+    }
+
+    /**
+     * @return DateTime|null
+     */
+    public function getStartAt(): ?DateTime
+    {
+        return $this->startAt;
     }
 
     /**

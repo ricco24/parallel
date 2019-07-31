@@ -29,6 +29,9 @@ class Parallel
     /** @var int */
     private $concurrent;
 
+    /** @var string */
+    private $logDir;
+
     /** @var TaskStack */
     private $taskStack;
 
@@ -45,12 +48,14 @@ class Parallel
      * @param string $binDirPath
      * @param string $fileName
      * @param int $concurrent
+     * @param string $logDir
      */
-    public function __construct(string $binDirPath, string $fileName, int $concurrent = 3)
+    public function __construct(string $binDirPath, string $fileName, int $concurrent = 3, string $logDir = '')
     {
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
         $this->concurrent = $concurrent;
+        $this->logDir = rtrim($logDir, '/');
         $this->logger = new NullLogger();
         $this->app = new Application();
         $this->app->add(new RunCommand($this));
@@ -130,22 +135,24 @@ class Parallel
         while (!$this->taskStack->isEmpty()) {
             foreach ($processes as $runningProcessKey => $runningProcess) {
                 if (!$runningProcess['process']->isRunning()) {
-                    $this->taskStack->markDone($runningProcess['stackedTask']->getTask()->getName());
-                    $this->moveTaskDataToBottom($runningProcess['stackedTask']);
+                    /** @var StackedTask $doneStackedTask */
+                    $doneStackedTask = $runningProcess['stackedTask'];
+
+                    $this->taskStack->markDone($doneStackedTask->getTask()->getName());
+                    $this->moveTaskDataToBottom($doneStackedTask);
                     unset($processes[$runningProcessKey]);
 
                     foreach ($processes as $process) {
                         /** @var StackedTask $runningStackedTask */
                         $runningStackedTask = $process['stackedTask'];
 
-                        /** @var StackedTask $doneStackedTask */
-                        $doneStackedTask = $runningProcess['stackedTask'];
                         $doneStackedTask->runningWithStop($runningStackedTask);
                         $runningStackedTask->runningWithStop($doneStackedTask);
                     }
 
                     // Redraw output when task finished
                     $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                    $this->printTaskStatsToFile($doneStackedTask);
                 }
             }
 
@@ -239,5 +246,28 @@ class Parallel
         $taskData = $this->data[$taskName];
         unset($this->data[$taskName]);
         $this->data[$taskName] = $taskData;
+    }
+
+    /**
+     * @param StackedTask $stackedTask
+     */
+    private function printTaskStatsToFile(StackedTask $stackedTask): void
+    {
+        if (empty($this->logDir)) {
+            return;
+        }
+
+        $text = sprintf("***************************************\nTask: %s\n***************************************", $stackedTask->getTask()->getName());
+        $text .= sprintf("Start at: %s", $stackedTask->getStartAt());
+        $text .= sprintf("Finished at: %s", $stackedTask->getStartAt());
+
+        if (count($stackedTask->getRunningWith())) {
+            $text .= "Tasks ran along:";
+            foreach ($stackedTask->getRunningWith() as $name => $value) {
+                $text .= sprintf("%s (%s - %s)", $name, $value['from']->format('H:i:s'), $value['to']->format('H:i:s'));
+            }
+        }
+
+        file_put_contents($this->logDir . '/task-stats.log', $text, FILE_APPEND);
     }
 }
