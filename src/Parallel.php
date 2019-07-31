@@ -265,7 +265,7 @@ class Parallel
             /** @var TaskData $taskData */
             $taskData = $this->data[$stackedTask->getTask()->getName()];
             $text .= "\nResults:\n";
-            $text .= sprintf("Total: %d\nSuccess: %d\nSkipped: %d\nErrors: %d\n",
+            $text .= sprintf(" - total: %d\n - success: %d\n - skipped: %d\n - errors: %d\n",
                 $taskData->getCount(),
                 $taskData->getExtra('success', 0),
                 $taskData->getExtra('skip', 0),
