@@ -12,6 +12,7 @@ use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\Table as TableHelper;
 use Symfony\Component\Process\Process;
+use DateTime;
 
 class TableOutput implements Output
 {
@@ -216,7 +217,9 @@ class TableOutput implements Output
             }
 
             foreach ($row->getStackedTask()->getRunningWith() as $runningWithTaskName => $runningWithTaskData) {
-                $message .= sprintf("\n%s from: %s to: %s", $runningWithTaskName, $runningWithTaskData['from']->format('H:i:s'), $runningWithTaskName['to']->format('H:i:s'));
+                $from = new DateTime($runningWithTaskData['from']);
+                $to = new DateTime($runningWithTaskData['to']);
+                $message .= sprintf("\n%s from: %s to: %s", $runningWithTaskName, $from->format('H:i:s'), $to->format('H:i:s'));
             }
 
             $table->addRow([

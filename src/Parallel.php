@@ -141,6 +141,7 @@ class Parallel
                         /** @var StackedTask $doneStackedTask */
                         $doneStackedTask = $runningProcess['stackedTask'];
                         $doneStackedTask->runningWithStop($runningStackedTask);
+                        $runningStackedTask->runningWithStop($doneStackedTask);
                     }
 
                     // Redraw output when task finished
@@ -158,6 +159,7 @@ class Parallel
                     /** @var StackedTask $runningStackedTask */
                     $runningStackedTask = $process['stackedTask'];
                     $stackedTask->runningWithStart($runningStackedTask);
+                    $runningStackedTask->runningWithStart($stackedTask);
                 }
 
                 $processes[] = $process = [

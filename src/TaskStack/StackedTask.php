@@ -138,7 +138,6 @@ class StackedTask
             'from' => new DateTime(),
             'to' => null
         ];
-        $stackedTask->runningWithStart($this);
     }
 
     /**
@@ -147,7 +146,6 @@ class StackedTask
     public function runningWithStop(StackedTask $stackedTask): void
     {
         $this->runningWith[$stackedTask->getTask()->getName()]['to'] = new DateTime();
-        $stackedTask->runningWithStop($this);
     }
 
     /**
