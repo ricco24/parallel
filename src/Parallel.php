@@ -92,12 +92,13 @@ class Parallel
     /**
      * @param Task $task
      * @param array $runAfter
+     * @param int|null $maxConcurrentTasksCount
      * @return Parallel
      */
-    public function addTask(Task $task, $runAfter = []): Parallel
+    public function addTask(Task $task, $runAfter = [], ?int $maxConcurrentTasksCount = null): Parallel
     {
         $task->setLogger($this->logger);
-        $this->taskStack->addTask($task, $runAfter);
+        $this->taskStack->addTask($task, $runAfter, $maxConcurrentTasksCount);
         $this->app->add($task);
         return $this;
     }

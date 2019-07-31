@@ -28,11 +28,12 @@ class TaskStack
     /**
      * @param Task $task
      * @param array $runAfter
+     * @param int|null $maxConcurrentTasksCount
      * @return TaskStack
      */
-    public function addTask(Task $task, $runAfter = []): TaskStack
+    public function addTask(Task $task, $runAfter = [], ?int $maxConcurrentTasksCount = null): TaskStack
     {
-        $this->stackedTasks[$task->getName()] = new StackedTask($task, $runAfter);
+        $this->stackedTasks[$task->getName()] = new StackedTask($task, $runAfter, $maxConcurrentTasksCount);
         $this->tasksCount++;
         return $this;
     }
