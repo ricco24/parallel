@@ -257,16 +257,25 @@ class Parallel
             return;
         }
 
-        $text = sprintf("***************************************\nTask: %s\n***************************************", $stackedTask->getTask()->getName());
-        $text .= sprintf("Start at: %s", $stackedTask->getStartAt());
-        $text .= sprintf("Finished at: %s", $stackedTask->getStartAt());
+        $text = sprintf("***************************************************\nTask: %s\n***************************************************\n", $stackedTask->getTask()->getName());
+        $text .= sprintf("Start at: %s\n", $stackedTask->getStartAt()->format('H:i:s'));
+        $text .= sprintf("Finished at: %s\n", $stackedTask->getFinishedAt()->format('H:i:s'));
+
+        if (isset($this->data[$stackedTask->getTask()->getName()])) {
+            /** @var TaskData $taskData */
+            $taskData = $this->data[$stackedTask->getTask()->getName()];
+            $text .= "\nResults:\n";
+            $text .= sprintf("Success: %d\nSkipped: %d\nErrors: %d", $taskData->getExtra('success', 0), $taskData->getExtra('skip', 0), $taskData->getExtra('error', 0))
+        }
 
         if (count($stackedTask->getRunningWith())) {
-            $text .= "Tasks ran along:";
+            $text .= "\nTasks ran along:\n";
             foreach ($stackedTask->getRunningWith() as $name => $value) {
-                $text .= sprintf("%s (%s - %s)", $name, $value['from']->format('H:i:s'), $value['to']->format('H:i:s'));
+                $text .= sprintf(" - %s (%s - %s)\n", $name, $value['from']->format('H:i:s'), $value['to']->format('H:i:s'));
             }
         }
+
+        $text .= "\n";
 
         file_put_contents($this->logDir . '/task-stats.log', $text, FILE_APPEND);
     }
