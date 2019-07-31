@@ -133,6 +133,15 @@ class Parallel
                     $this->moveTaskDataToBottom($runningProcess['stackedTask']);
                     unset($processes[$runningProcessKey]);
 
+                    foreach ($processes as $process) {
+                        /** @var StackedTask $runningStackedTask */
+                        $runningStackedTask = $process['stackedTask'];
+
+                        /** @var StackedTask $doneStackedTask */
+                        $doneStackedTask = $runningProcess['stackedTask'];
+                        $doneStackedTask->runningWithStop($runningStackedTask);
+                    }
+
                     // Redraw output when task finished
                     $this->output->printToOutput($output, $this->data, microtime(true) - $start);
                 }
@@ -144,6 +153,12 @@ class Parallel
             }
 
             foreach ($this->taskStack->getRunnableTasks($this->concurrent - count($processes), count($processes)) as $stackedTask) {
+                foreach ($processes as $process) {
+                    /** @var StackedTask $runningStackedTask */
+                    $runningStackedTask = $process['stackedTask'];
+                    $stackedTask->runningWithStart($runningStackedTask);
+                }
+
                 $processes[] = $process = [
                     'process' => new Process('php ' . $this->fileName . ' ' . $stackedTask->getTask()->getName(), $this->binDirPath, null, null, null),
                     'stackedTask' => $stackedTask

@@ -29,6 +29,9 @@ class StackedTask
     /** @var array */
     private $currentRunAfter = [];
 
+    /** @var array */
+    private $runningWith = [];
+
     /**
      * StackedTask constructor.
      * @param Task $task
@@ -124,5 +127,34 @@ class StackedTask
     public function isRunnable(): bool
     {
         return ! ((bool) count($this->currentRunAfter));
+    }
+
+    /**
+     * @param StackedTask $stackedTask
+     */
+    public function runningWithStart(StackedTask $stackedTask): void
+    {
+        $this->runningWith[$stackedTask->getTask()->getName()] = [
+            'from' => new DateTime(),
+            'to' => null
+        ];
+        $stackedTask->runningWithStart($this);
+    }
+
+    /**
+     * @param StackedTask $stackedTask
+     */
+    public function runningWithStop(StackedTask $stackedTask): void
+    {
+        $this->runningWith[$stackedTask->getTask()->getName()]['to'] = new DateTime();
+        $stackedTask->runningWithStop($this);
+    }
+
+    /**
+     * @return array
+     */
+    public function getRunningWith(): array
+    {
+        return $this->runningWith;
     }
 }
