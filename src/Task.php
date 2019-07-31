@@ -100,7 +100,7 @@ abstract class Task extends Command
     }
 
     /**
-     * No progress start end
+     * No progress task end
      * @param array $data
      */
     protected function notifyEnd(array $data = []): void

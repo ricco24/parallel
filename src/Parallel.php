@@ -143,7 +143,7 @@ class Parallel
                 continue;
             }
 
-            foreach ($this->taskStack->getRunnableTasks($this->concurrent - count($processes)) as $stackedTask) {
+            foreach ($this->taskStack->getRunnableTasks($this->concurrent - count($processes), count($processes)) as $stackedTask) {
                 $processes[] = $process = [
                     'process' => new Process('php ' . $this->fileName . ' ' . $stackedTask->getTask()->getName(), $this->binDirPath, null, null, null),
                     'stackedTask' => $stackedTask

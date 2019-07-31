@@ -23,17 +23,23 @@ class StackedTask
     /** @var array */
     private $runAfter = [];
 
+    /** @var int|null */
+    private $maxConcurrentTasksCount;
+
     /** @var array */
     private $currentRunAfter = [];
 
     /**
+     * StackedTask constructor.
      * @param Task $task
      * @param array $runAfter
+     * @param int|null $maxConcurrentTasksCount
      */
-    public function __construct(Task $task, array $runAfter = [])
+    public function __construct(Task $task, array $runAfter = [], ?int $maxConcurrentTasksCount = null)
     {
         $this->task = $task;
         $this->runAfter = $this->currentRunAfter = array_combine($runAfter, $runAfter);
+        $this->maxConcurrentTasksCount = $maxConcurrentTasksCount;
         $this->status = self::STATUS_STACKED;
     }
 
@@ -81,6 +87,14 @@ class StackedTask
     public function getFinishedAt(): ?DateTime
     {
         return $this->finishedAt;
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getMaxConcurrentTasksCount(): ?int
+    {
+        return $this->maxConcurrentTasksCount;
     }
 
     /**

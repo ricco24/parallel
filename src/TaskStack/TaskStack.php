@@ -71,13 +71,36 @@ class TaskStack
     /**
      * Get desired number of runnable tasks
      * @param int $count
+     * @param int $currentTasksRunningCount
      * @return StackedTask[]
      */
-    public function getRunnableTasks(int $count = 1): array
+    public function getRunnableTasks(int $count = 1, int $currentTasksRunningCount): array
     {
+        $runnableTasks = [];
+        $selected = 0;
+
         /** @var StackedTask[] $runnableTasks */
-        $runnableTasks = array_slice($this->runnableTasks, 0, $count);
-        $this->runnableTasks = array_slice($this->runnableTasks, $count);
+        foreach ($this->runnableTasks as $key => $task) {
+            if ($selected === $count) {
+                break;
+            }
+
+            // Check if any running task reach max concurrent task count
+            foreach ($this->runningTasks as $runningTask) {
+                if ($runningTask->getMaxConcurrentTasksCount() !== null && ($runningTask->getMaxConcurrentTasksCount() <= $currentTasksRunningCount + count($runnableTasks))) {
+                    break 2;
+                }
+            }
+
+            // Check if selected runnable task reach max concurrent task count
+            if ($task->getMaxConcurrentTasksCount() !== null && ($task->getMaxConcurrentTasksCount() > $currentTasksRunningCount + count($runnableTasks))) {
+                continue;
+            }
+
+            $runnableTasks[] = $task;
+            unset($this->runnableTasks[$key]);
+            $selected++;
+        }
 
         foreach ($runnableTasks as $runnableTask) {
             $this->runningTasks[$runnableTask->getTask()->getName()] = $runnableTask;
