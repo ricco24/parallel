@@ -12,7 +12,6 @@ use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Helper\Table as TableHelper;
 use Symfony\Component\Process\Process;
-use DateTime;
 
 class TableOutput implements Output
 {

@@ -44,6 +44,9 @@ class Parallel
     /** @var array */
     private $data = [];
 
+    /** @var string|null */
+    private $logFile;
+
     /**
      * @param string $binDirPath
      * @param string $fileName
@@ -257,31 +260,39 @@ class Parallel
             return;
         }
 
-        $text = sprintf("***************************************************\nTask: %s\n***************************************************\n", $stackedTask->getTask()->getName());
-        $text .= sprintf("Start at: %s\n", $stackedTask->getStartAt()->format('H:i:s'));
-        $text .= sprintf("Finished at: %s\n", $stackedTask->getFinishedAt()->format('H:i:s'));
-
-        if (isset($this->data[$stackedTask->getTask()->getName()])) {
-            /** @var TaskData $taskData */
-            $taskData = $this->data[$stackedTask->getTask()->getName()];
-            $text .= "\nResults:\n";
-            $text .= sprintf(" - total: %d\n - success: %d\n - skipped: %d\n - errors: %d\n",
-                $taskData->getCount(),
-                $taskData->getExtra('success', 0),
-                $taskData->getExtra('skip', 0),
-                $taskData->getExtra('error', 0)
-            );
+        if (!$this->logFile) {
+            @mkdir(sprintf("%s/stats", $this->logDir));
+            $this->logFile = sprintf("%s/stats/%s.log", $this->logDir, time());
         }
 
+        $fileContent = file_get_contents($this->logFile);
+        $data = $fileContent ? json_decode($fileContent, true) : [];
+
+        $withTasks = [];
         if (count($stackedTask->getRunningWith())) {
-            $text .= "\nTasks ran along:\n";
             foreach ($stackedTask->getRunningWith() as $name => $value) {
-                $text .= sprintf(" - %s (%s - %s)\n", $name, $value['from']->format('H:i:s'), $value['to']->format('H:i:s'));
+                $withTasks[$name] = [
+                    'from' => $value['from']->format('c'),
+                    'to' => $value['to']->format('c')
+                ];
             }
         }
 
-        $text .= "\n";
+        /** @var TaskData $taskData */
+        $taskData = $this->data[$stackedTask->getTask()->getName()];
 
-        file_put_contents($this->logDir . '/task-stats.log', $text, FILE_APPEND);
+        $data['tasks_count'] = count($this->data);
+        $data['finished'] = $this->taskStack->isEmpty();
+        $data['tasks'][$stackedTask->getTask()->getName()] = [
+            'start_at' => $stackedTask->getStartAt()->format('c'),
+            'end_at' =>  $stackedTask->getFinishedAt()->format('c'),
+            'duration' => $taskData->getDuration(),
+            'count' => $taskData->getCount(),
+            'memory_peak' => $taskData->getMemoryPeak(),
+            'extra' => $taskData->getAllExtra(),
+            'with_tasks' => $withTasks
+        ];
+
+        file_put_contents($this->logFile, json_encode($data));
     }
 }
