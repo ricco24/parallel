@@ -128,6 +128,9 @@ class Parallel
         $start = microtime(true);
         $this->output->startMessage($output);
 
+        @mkdir(sprintf("%s/stats", $this->logDir));
+        $this->logFile = sprintf("%s/stats/%s.log", $this->logDir, time());
+
         // Add all tasks to tasks data array
         foreach ($this->taskStack->getStackedTasks() as $stashedTask) {
             $this->buildTaskData($stashedTask);
@@ -258,11 +261,6 @@ class Parallel
     {
         if (empty($this->logDir)) {
             return;
-        }
-
-        if (!$this->logFile) {
-            @mkdir(sprintf("%s/stats", $this->logDir));
-            $this->logFile = sprintf("%s/stats/%s.log", $this->logDir, time());
         }
 
         $fileContent = file_get_contents($this->logFile);
