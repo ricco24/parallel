@@ -2,6 +2,10 @@
 
 ## [Unreleased][unreleased]
 
+### Added
+- MaxConcurrentTaskCount option for StackedTask
+- list of task which ran with done tasks
+
 ### Changed
 - Custom log replaced with PSR log interfaces
 

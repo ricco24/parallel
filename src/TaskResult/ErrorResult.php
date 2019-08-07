@@ -29,6 +29,14 @@ class ErrorResult extends BaseTaskResult
     }
 
     /**
+     * @return string
+     */
+    public function getShortName(): string
+    {
+        return 'error';
+    }
+
+    /**
      * @return null|Throwable
      */
     public function getThrowable(): ?Throwable

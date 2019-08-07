@@ -100,7 +100,7 @@ abstract class Task extends Command
     }
 
     /**
-     * No progress start end
+     * No progress task end
      * @param array $data
      */
     protected function notifyEnd(array $data = []): void
@@ -149,7 +149,7 @@ abstract class Task extends Command
     {
         $result = [
             'task' => $this->getName(),
-            'result' => $result ? get_class($result) : null
+            'result' => $result ? $result->getShortName() : null
         ];
 
         if ($result instanceof ErrorResult) {
