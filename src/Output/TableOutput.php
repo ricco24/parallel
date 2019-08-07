@@ -210,6 +210,11 @@ class TableOutput implements Output
     private function renderDoneTasks(Table $table, array $rows, int $avgMemoryUsage, array &$total): void
     {
         foreach ($rows as $rowTitle => $row) {
+            $rowMessage = $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : '';
+            if ($row->getExtra('error', 0) && $row->getExtra('message', '')) {
+                $rowMessage .= ". " . $row->getExtra('message', '');
+            }
+
             $table->addRow([
                 $this->formatTitle($rowTitle, $row),
                 number_format($row->getCount()),
@@ -220,7 +225,7 @@ class TableOutput implements Output
                 $this->progress($row->getProgress()),
                 TimeHelper::formatTime($row->getDuration()),
                 $this->formatMemory($row, $avgMemoryUsage),
-                $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : ''
+                $rowMessage
             ]);
 
             $total['count'] += $row->getCount();
