@@ -63,8 +63,8 @@ class TableOutput implements Output
 
     /**
      * @param OutputInterface $output
-     * @param array $stacked
-     * @param array $running
+     * @param TaskData[] $stacked
+     * @param TaskData[] $running
      */
     private function renderStackedTable(OutputInterface $output, array $stacked, array $running): void
     {
@@ -103,9 +103,9 @@ class TableOutput implements Output
 
     /**
      * @param OutputInterface $output
-     * @param array $all
-     * @param array $running
-     * @param array $done
+     * @param TaskData[] $all
+     * @param TaskData[] $running
+     * @param TaskData[] $done
      * @param float $elapsedTime
      */
     private function renderMainTable(OutputInterface $output, array $all, array $running, array $done, float $elapsedTime): void
@@ -168,7 +168,7 @@ class TableOutput implements Output
 
     /**
      * @param TableHelper $table
-     * @param array $rows
+     * @param TaskData[] $rows
      * @param int $avgMemoryUsage
      * @param array $total
      */
@@ -203,7 +203,7 @@ class TableOutput implements Output
 
     /**
      * @param TableHelper $table
-     * @param array $rows
+     * @param TaskData[] $rows
      * @param int $avgMemoryUsage
      * @param array $total
      */

@@ -149,7 +149,7 @@ abstract class Task extends Command
     {
         $result = [
             'task' => $this->getName(),
-            'result' => $result ? get_class($result) : null
+            'result' => $result ? $result->getShortName() : null
         ];
 
         if ($result instanceof ErrorResult) {
