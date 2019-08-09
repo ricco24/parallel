@@ -263,7 +263,7 @@ class Parallel
             return;
         }
 
-        $fileContent = file_get_contents($this->logFile);
+        $fileContent = @file_get_contents($this->logFile);
         $data = $fileContent ? json_decode($fileContent, true) : [];
 
         $withTasks = [];
