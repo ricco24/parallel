@@ -32,6 +32,8 @@ abstract class BatchProgressTask extends BaseTask
         try {
             $this->launchStartup();
         } catch (Throwable $e) {
+            $this->error = 1;
+            $this->sendNotify(0, 0, ['message' => 'Startup script failed']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
@@ -81,6 +83,8 @@ abstract class BatchProgressTask extends BaseTask
         try {
             $this->launchShutdown($itemsCount, $processedItems);
         } catch (Throwable $e) {
+            $this->error = $this->error === 0 ? 1 : $this->error;
+            $this->sendNotify($itemsCount, $processedItems, ['message' => 'Shutdown script failed']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
