@@ -5,9 +5,11 @@
 ### Added
 - MaxConcurrentTaskCount option for StackedTask
 - list of task which ran with done tasks
+- Tests
 
 ### Changed
 - Custom log replaced with PSR log interfaces
+- Composer dependencies update
 
 ### Fixed
 - TableOutput show minimal saved time as 0

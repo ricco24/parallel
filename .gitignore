@@ -6,3 +6,4 @@ composer.lock
 /build/
 /output/
 /log/
+.phpunit.result.cache
