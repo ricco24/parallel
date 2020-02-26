@@ -15,6 +15,8 @@
 - TableOutput show minimal saved time as 0
 - Icons fix
 - BatchProgressTask startup/shutdown error notify
+- Unhandled exceptions in ProgressTask and BatchProgressTask
+- DataHelper gigabytes count
 
 ## 1.0.0 - 2016-06-06
 - First tagged version

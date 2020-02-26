@@ -37,8 +37,22 @@ abstract class BatchProgressTask extends BaseTask
             return new ErrorResult($e->getMessage(), $e);
         }
 
-        $items = $this->items(0);
-        $itemsCount = $this->itemsCount();
+        try {
+            $items = $this->items(0);
+        } catch (Throwable $e) {
+            $this->error = 1;
+            $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
+            return new ErrorResult($e->getMessage(), $e);
+        }
+
+        try {
+            $itemsCount = $this->itemsCount();
+        } catch (Throwable $e) {
+            $this->error = 1;
+            $this->sendNotify(0, 0, ['message' => 'Error while counting items']);
+            return new ErrorResult($e->getMessage(), $e);
+        }
+
         $processedItems = 0;
 
         while (count($items)) {
@@ -77,7 +91,13 @@ abstract class BatchProgressTask extends BaseTask
                 break;
             }
 
-            $items = $this->items($processedItems);
+            try {
+                $items = $this->items($processedItems);
+            } catch (Throwable $e) {
+                $this->error = 1;
+                $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
+                return new ErrorResult($e->getMessage(), $e);
+            }
         }
 
         try {
