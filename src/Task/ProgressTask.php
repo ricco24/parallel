@@ -29,10 +29,23 @@ abstract class ProgressTask extends BaseTask
      */
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
-        $items = $this->items();
-        $itemsCount = $this->itemsCount();
-        $i = 1;
+        try {
+            $items = $this->items();
+        } catch (Throwable $e) {
+            $this->error = 1;
+            $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
+            return new ErrorResult($e->getMessage(), $e);
+        }
 
+        try {
+            $itemsCount = $this->itemsCount();
+        } catch (Throwable $e) {
+            $this->error = 1;
+            $this->sendNotify(0, 0, ['message' => 'Error while counting items']);
+            return new ErrorResult($e->getMessage(), $e);
+        }
+
+        $i = 1;
         foreach ($items as $item) {
             try {
                 $taskResult = $this->processItem($item);
@@ -43,11 +56,7 @@ abstract class ProgressTask extends BaseTask
             $this->processResult($taskResult);
             $this->logTaskResultToFile($taskResult);
 
-            $this->notify($itemsCount, $i++, [
-                'success' => $this->success,
-                'skip' => $this->skip,
-                'error' => $this->error
-            ]);
+            $this->sendNotify($itemsCount, $i++);
         }
 
         return new SuccessResult();
@@ -65,6 +74,22 @@ abstract class ProgressTask extends BaseTask
         } elseif ($taskResult instanceof ErrorResult) {
             $this->error++;
         }
+    }
+
+    /**
+     * Wrapper function for notification
+     * @param int $itemsCount
+     * @param int $processedItems
+     * @param array $data
+     */
+    private function sendNotify(int $itemsCount, int $processedItems, array $data = []): void
+    {
+        $this->notify($itemsCount, $processedItems, array_merge([
+            'success' => $this->success,
+            'skip' => $this->skip,
+            'error' => $this->error,
+            'message' => ''
+        ], $data));
     }
 
     /**

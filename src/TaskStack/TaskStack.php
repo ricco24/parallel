@@ -75,7 +75,7 @@ class TaskStack
      * @param int $currentTasksRunningCount
      * @return StackedTask[]
      */
-    public function getRunnableTasks(int $count = 1, int $currentTasksRunningCount): array
+    public function getRunnableTasks(int $count, int $currentTasksRunningCount): array
     {
         $runnableTasks = [];
         $selected = 0;
