@@ -16,7 +16,7 @@ class DataHelper
         }
 
         $gigabytes = $megabytes / 1024;
-        if ($megabytes < 1024) {
+        if ($gigabytes < 1024) {
             return number_format($gigabytes, 1) . ' GB';
         }
 
