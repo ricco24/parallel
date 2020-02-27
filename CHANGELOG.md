@@ -10,6 +10,7 @@
 ### Changed
 - Custom log replaced with PSR log interfaces
 - Composer dependencies update
+- PrgressTask, BatchProgressTask first fetch items count and then gather items to process
 
 ### Fixed
 - TableOutput show minimal saved time as 0
