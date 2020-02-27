@@ -29,11 +29,22 @@ abstract class BatchProgressTask extends BaseTask
      */
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
+        $processedItems = 0;
+
         try {
             $this->launchStartup();
         } catch (Throwable $e) {
             $this->error = 1;
             $this->sendNotify(0, 0, ['message' => 'Startup script failed']);
+            return new ErrorResult($e->getMessage(), $e);
+        }
+
+        try {
+            $itemsCount = $this->itemsCount();
+            $this->sendNotify($itemsCount, $processedItems);
+        } catch (Throwable $e) {
+            $this->error = 1;
+            $this->sendNotify(0, 0, ['message' => 'Error while counting items']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
@@ -44,16 +55,6 @@ abstract class BatchProgressTask extends BaseTask
             $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
             return new ErrorResult($e->getMessage(), $e);
         }
-
-        try {
-            $itemsCount = $this->itemsCount();
-        } catch (Throwable $e) {
-            $this->error = 1;
-            $this->sendNotify(0, 0, ['message' => 'Error while counting items']);
-            return new ErrorResult($e->getMessage(), $e);
-        }
-
-        $processedItems = 0;
 
         while (count($items)) {
             $itemsToProcess = [];
