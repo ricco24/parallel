@@ -30,18 +30,19 @@ abstract class ProgressTask extends BaseTask
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
         try {
-            $items = $this->items();
+            $itemsCount = $this->itemsCount();
+            $this->sendNotify($itemsCount, 0);
         } catch (Throwable $e) {
             $this->error = 1;
-            $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
+            $this->sendNotify(0, 0, ['message' => 'Error while counting items']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
         try {
-            $itemsCount = $this->itemsCount();
+            $items = $this->items();
         } catch (Throwable $e) {
             $this->error = 1;
-            $this->sendNotify(0, 0, ['message' => 'Error while counting items']);
+            $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
