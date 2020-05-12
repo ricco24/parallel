@@ -30,7 +30,6 @@ abstract class BatchProgressTask extends BaseTask
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
         $processedItems = 0;
-
         try {
             $this->launchStartup();
         } catch (Throwable $e) {
@@ -140,6 +139,16 @@ abstract class BatchProgressTask extends BaseTask
             'error' => $this->error,
             'message' => ''
         ], $data));
+    }
+
+    /**
+     * Send message with zero values
+     * @TODO: store values in process and send real values in any time
+     * @param $message
+     */
+    protected function touchNotify($message)
+    {
+        $this->sendNotify(0, 0, ['message' => $message]);
     }
 
     /**

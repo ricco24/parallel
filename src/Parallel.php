@@ -126,6 +126,11 @@ class Parallel
         $this->app->run();
     }
 
+    private function initializeTaskStack(): void
+    {
+
+    }
+
     /**
      * @param InputInterface $input
      * @param OutputInterface $output

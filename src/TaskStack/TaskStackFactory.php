@@ -4,36 +4,67 @@ namespace Parallel\TaskStack;
 
 class TaskStackFactory
 {
-    public function create(array $tasks, array $subnets)
+    /**
+     * @param array $tasksData
+     * @param array $subnets
+     * @return TaskStack
+     * @throws TaskNameNotExistException
+     */
+    public function create(array $tasksData, array $subnets)
     {
         $taskStack = new TaskStack();
+        $taskNames = $this->getFlattenTaskNames($tasksData);
 
-        $taskNames = [];
-        foreach ($tasks as $task) {
-            $taskNames[$task['task']->getName()] = true;
-        }
-
-        foreach ($tasks as $task) {
-            foreach ($task['runAfter'] as $runAfterTask) {
+        // Check dependencies task names
+        foreach ($tasksData as $taskData) {
+            foreach ($taskData['runAfter'] as $runAfterTask) {
                 if (!array_key_exists($runAfterTask, $taskNames)) {
-                    // @TODO: task doesnt exists
+                    throw new TaskNameNotExistException(sprintf("Task with name \"%s\", required by \"%s\" does not exist", $runAfterTask, $taskData['task']->getName()));
                 }
             }
         }
 
+        // Nothing needs to be filtered
         if (empty($subnets)) {
-            foreach ($tasks as $task) {
-                $taskStack->addTask($task['task'], $task['runAfter'], $task['maxConcurrentTasksCount']);
+            foreach ($tasksData as $taskData) {
+                $taskStack->addTask($taskData['task'], $taskData['runAfter'], $taskData['maxConcurrentTasksCount']);
             }
             return $taskStack;
         }
 
-        foreach ($tasks as $task) {
-            foreach ($subnets as $subnet) {
-                if (preg_match($subnet, $task['task']->getName())) {
-                    
+        // Filter out all tasks that does not match any subnet
+        foreach ($tasksData as $taskData) {
+            if (!$this->matchSomeSubnet($subnets, $taskData['task']->getName())) {
+                continue;
+            }
+
+            $runAfter = [];
+            foreach ($taskData['runAfter'] as $runAfterTask) {
+                if ($this->matchSomeSubnet($subnets, $runAfterTask)) {
+                    $runAfter[] = $runAfterTask;
                 }
             }
+
+            $taskStack->addTask($taskData['task'], $runAfter, $taskData['maxConcurrentTasksCount']);
         }
+    }
+
+    private function getFlattenTaskNames(array $tasksData): array
+    {
+        $taskNames = [];
+        foreach ($tasksData as $taskData) {
+            $taskNames[$taskData['task']->getName()] = true;
+        }
+        return $taskNames;
+    }
+
+    private function matchSomeSubnet(array $subnets, string $taskName): bool
+    {
+        foreach ($subnets as $subnet) {
+            if (preg_match($subnet, $taskName)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
