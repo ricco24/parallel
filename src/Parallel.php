@@ -9,12 +9,15 @@ use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
 use Parallel\TaskStack\StackedTask;
 use Parallel\TaskStack\TaskStack;
+use Parallel\TaskStack\TaskStackFactory;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Process\Process;
+use Parallel\Exception\TaskStackFactoryException;
+use Exception;
 
 class Parallel
 {
@@ -31,6 +34,12 @@ class Parallel
 
     /** @var string */
     private $logDir;
+
+    /** @var array */
+    private $tasksData = [];
+
+    /** @var TaskStackFactory */
+    private $taskStackFactory;
 
     /** @var TaskStack */
     private $taskStack;
@@ -65,7 +74,7 @@ class Parallel
         $this->app->add(new AnalyzeGraphCommand($this));
 
         // Defaults
-        $this->taskStack = new TaskStack();
+        $this->taskStackFactory = new TaskStackFactory();
         $this->output = new TableOutput();
     }
 
@@ -81,9 +90,11 @@ class Parallel
 
     /**
      * @return TaskStack
+     * @throws TaskStackFactoryException
      */
     public function getTaskStack(): TaskStack
     {
+        $this->initializeTaskStack();
         return $this->taskStack;
     }
 
@@ -106,17 +117,35 @@ class Parallel
     public function addTask(Task $task, $runAfter = [], ?int $maxConcurrentTasksCount = null): Parallel
     {
         $task->setLogger($this->logger);
-        $this->taskStack->addTask($task, $runAfter, $maxConcurrentTasksCount);
+        $this->tasksData[] = [
+            'task' => $task,
+            'runAfter' => $runAfter,
+            'maxConcurrentTasksCount' => $maxConcurrentTasksCount
+        ];
         $this->app->add($task);
         return $this;
     }
 
     /**
      * Start parallel
+     * @throws Exception
      */
     public function runConsoleApp(): void
     {
         $this->app->run();
+    }
+
+    /**
+     * @param array $subnets
+     * @throws TaskStackFactoryException
+     */
+    private function initializeTaskStack(array $subnets = []): void
+    {
+        if ($this->taskStack !== null) {
+            return;
+        }
+
+        $this->taskStack = $this->taskStackFactory->create($this->tasksData, $subnets);
     }
 
     /**
@@ -125,6 +154,13 @@ class Parallel
      */
     public function execute(InputInterface $input, OutputInterface $output): void
     {
+        try {
+            $this->initializeTaskStack($input->getOption('subnet'));
+        } catch (TaskStackFactoryException $e) {
+            $this->output->errorMessage($output, $e->getMessage());
+            return;
+        }
+
         $start = microtime(true);
         $this->output->startMessage($output);
 
