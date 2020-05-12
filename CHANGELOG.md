@@ -4,8 +4,9 @@
 
 ### Added
 - MaxConcurrentTaskCount option for StackedTask
-- list of task which ran with done tasks
+- List of task which ran with done tasks
 - Tests
+- Added sendMessage() method to ProgressTask and BatchProgressTask
 
 ### Changed
 - Custom log replaced with PSR log interfaces

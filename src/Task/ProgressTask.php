@@ -22,6 +22,12 @@ abstract class ProgressTask extends BaseTask
     /** @var int */
     private $error = 0;
 
+    /** @var int */
+    private $itemsCount = 0;
+
+    /** @var int */
+    private $processedItems = 0;
+
     /**
      * @param InputInterface $input
      * @param OutputInterface $output
@@ -30,11 +36,11 @@ abstract class ProgressTask extends BaseTask
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
         try {
-            $itemsCount = $this->itemsCount();
-            $this->sendNotify($itemsCount, 0);
+            $this->itemsCount = $this->itemsCount();
+            $this->sendNotify();
         } catch (Throwable $e) {
             $this->error = 1;
-            $this->sendNotify(0, 0, ['message' => 'Error while counting items']);
+            $this->sendNotify(['message' => 'Error while counting items']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
@@ -42,11 +48,10 @@ abstract class ProgressTask extends BaseTask
             $items = $this->items();
         } catch (Throwable $e) {
             $this->error = 1;
-            $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
+            $this->sendNotify(['message' => 'Error while fetching items']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
-        $i = 1;
         foreach ($items as $item) {
             try {
                 $taskResult = $this->processItem($item);
@@ -54,10 +59,10 @@ abstract class ProgressTask extends BaseTask
                 $taskResult = new ErrorResult($e->getMessage(), $e);
             }
 
+            $this->processedItems++;
             $this->processResult($taskResult);
             $this->logTaskResultToFile($taskResult);
-
-            $this->sendNotify($itemsCount, $i++);
+            $this->sendNotify();
         }
 
         return new SuccessResult();
@@ -79,18 +84,25 @@ abstract class ProgressTask extends BaseTask
 
     /**
      * Wrapper function for notification
-     * @param int $itemsCount
-     * @param int $processedItems
      * @param array $data
      */
-    private function sendNotify(int $itemsCount, int $processedItems, array $data = []): void
+    private function sendNotify(array $data = []): void
     {
-        $this->notify($itemsCount, $processedItems, array_merge([
+        $this->notify($this->itemsCount, $this->processedItems, array_merge([
             'success' => $this->success,
             'skip' => $this->skip,
             'error' => $this->error,
             'message' => ''
         ], $data));
+    }
+
+    /**
+     * Send message to output
+     * @param $message
+     */
+    protected function sendMessage($message)
+    {
+        $this->sendNotify(['message' => $message]);
     }
 
     /**
