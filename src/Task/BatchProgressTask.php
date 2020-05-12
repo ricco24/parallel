@@ -22,6 +22,12 @@ abstract class BatchProgressTask extends BaseTask
     /** @var int */
     private $error = 0;
 
+    /** @var int */
+    private $itemsCount = 0;
+
+    /** @var int */
+    private $processedItems = 0;
+
     /**
      * @param InputInterface $input
      * @param OutputInterface $output
@@ -29,21 +35,20 @@ abstract class BatchProgressTask extends BaseTask
      */
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
-        $processedItems = 0;
         try {
             $this->launchStartup();
         } catch (Throwable $e) {
             $this->error = 1;
-            $this->sendNotify(0, 0, ['message' => 'Startup script failed']);
+            $this->sendNotify(['message' => 'Startup script failed']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
         try {
-            $itemsCount = $this->itemsCount();
-            $this->sendNotify($itemsCount, $processedItems);
+            $this->itemsCount = $this->itemsCount();
+            $this->sendNotify();
         } catch (Throwable $e) {
             $this->error = 1;
-            $this->sendNotify(0, 0, ['message' => 'Error while counting items']);
+            $this->sendNotify(['message' => 'Error while counting items']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
@@ -51,7 +56,7 @@ abstract class BatchProgressTask extends BaseTask
             $items = $this->items(0);
         } catch (Throwable $e) {
             $this->error = 1;
-            $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
+            $this->sendNotify(['message' => 'Error while fetching items']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
@@ -69,7 +74,7 @@ abstract class BatchProgressTask extends BaseTask
                     $itemsToProcess[] = $taskResult->getData();
                 } else {
                     $this->processResult($taskResult);
-                    $processedItems++;
+                    $this->processedItems++;
                 }
             }
 
@@ -83,28 +88,28 @@ abstract class BatchProgressTask extends BaseTask
                 $this->error += count($itemsToProcess);
             }
 
-            $processedItems += count($itemsToProcess);
-            $this->sendNotify($itemsCount, $processedItems);
+            $this->processedItems += count($itemsToProcess);
+            $this->sendNotify();
 
             // Infinity loop protection
-            if ($processedItems == $itemsCount) {
+            if ($this->processedItems >= $this->itemsCount) {
                 break;
             }
 
             try {
-                $items = $this->items($processedItems);
+                $items = $this->items($this->processedItems);
             } catch (Throwable $e) {
                 $this->error = 1;
-                $this->sendNotify(0, 0, ['message' => 'Error while fetching items']);
+                $this->sendNotify(['message' => 'Error while fetching items']);
                 return new ErrorResult($e->getMessage(), $e);
             }
         }
 
         try {
-            $this->launchShutdown($itemsCount, $processedItems);
+            $this->launchShutdown();
         } catch (Throwable $e) {
             $this->error = $this->error === 0 ? 1 : $this->error;
-            $this->sendNotify($itemsCount, $processedItems, ['message' => 'Shutdown script failed']);
+            $this->sendNotify(['message' => 'Shutdown script failed']);
             return new ErrorResult($e->getMessage(), $e);
         }
 
@@ -127,13 +132,11 @@ abstract class BatchProgressTask extends BaseTask
 
     /**
      * Wrapper function for notification
-     * @param int $itemsCount
-     * @param int $processedItems
      * @param array $data
      */
-    private function sendNotify(int $itemsCount, int $processedItems, array $data = []): void
+    private function sendNotify(array $data = []): void
     {
-        $this->notify($itemsCount, $processedItems, array_merge([
+        $this->notify($this->itemsCount, $this->processedItems, array_merge([
             'success' => $this->success,
             'skip' => $this->skip,
             'error' => $this->error,
@@ -142,13 +145,12 @@ abstract class BatchProgressTask extends BaseTask
     }
 
     /**
-     * Send message with zero values
-     * @TODO: store values in process and send real values in any time
+     * Send message to output
      * @param $message
      */
-    protected function touchNotify($message)
+    protected function sendMessage($message)
     {
-        $this->sendNotify(0, 0, ['message' => $message]);
+        $this->sendNotify(['message' => $message]);
     }
 
     /**
@@ -156,21 +158,19 @@ abstract class BatchProgressTask extends BaseTask
      */
     private function launchStartup(): void
     {
-        $this->sendNotify(0, 0, ['message' => 'Running startup prepare']);
+        $this->sendNotify(['message' => 'Running startup prepare']);
         $this->startup();
-        $this->sendNotify(0, 0);
+        $this->sendNotify();
     }
 
     /**
      * Shutdown wrapper
-     * @param int $itemsCount
-     * @param int $processItems
      */
-    private function launchShutdown(int $itemsCount, int $processItems): void
+    private function launchShutdown(): void
     {
-        $this->sendNotify($itemsCount, $processItems, ['message' => 'Running shutdown cleanup']);
+        $this->sendNotify(['message' => 'Running shutdown cleanup']);
         $this->shutdown();
-        $this->sendNotify($itemsCount, $processItems);
+        $this->sendNotify();
     }
 
     /**
