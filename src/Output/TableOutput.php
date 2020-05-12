@@ -20,7 +20,16 @@ class TableOutput implements Output
      */
     public function startMessage(OutputInterface $output): void
     {
-        $output->writeln('Starting parallel task processing ...');
+        $output->writeln("\nStarting parallel task processing ...\n");
+    }
+
+    /**
+     * @param OutputInterface $output
+     * @param string $error
+     */
+    public function errorMessage(OutputInterface $output, string $error): void
+    {
+        $output->writeln("\n<error>" . $error . "</error>\n");
     }
 
     /**

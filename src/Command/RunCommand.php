@@ -5,6 +5,7 @@ namespace Parallel\Command;
 use Parallel\Parallel;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 
 class RunCommand extends Command
@@ -26,7 +27,8 @@ class RunCommand extends Command
      */
     protected function configure(): void
     {
-        $this->setName('parallel:run');
+        $this->setName('parallel:run')
+            ->addOption('subnet', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'Filter out tasks which match at least one subnet');
     }
 
     /**

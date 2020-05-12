@@ -2,13 +2,15 @@
 
 namespace Parallel\TaskStack;
 
+use Parallel\Exception\TaskStackFactoryException;
+
 class TaskStackFactory
 {
     /**
      * @param array $tasksData
      * @param array $subnets
      * @return TaskStack
-     * @throws TaskNameNotExistException
+     * @throws TaskStackFactoryException
      */
     public function create(array $tasksData, array $subnets)
     {
@@ -19,7 +21,7 @@ class TaskStackFactory
         foreach ($tasksData as $taskData) {
             foreach ($taskData['runAfter'] as $runAfterTask) {
                 if (!array_key_exists($runAfterTask, $taskNames)) {
-                    throw new TaskNameNotExistException(sprintf("Task with name \"%s\", required by \"%s\" does not exist", $runAfterTask, $taskData['task']->getName()));
+                    throw new TaskStackFactoryException(sprintf("Task with name \"%s\" required by \"%s\" does not exist", $runAfterTask, $taskData['task']->getName()));
                 }
             }
         }
@@ -47,6 +49,7 @@ class TaskStackFactory
 
             $taskStack->addTask($taskData['task'], $runAfter, $taskData['maxConcurrentTasksCount']);
         }
+        return $taskStack;
     }
 
     private function getFlattenTaskNames(array $tasksData): array
@@ -61,7 +64,7 @@ class TaskStackFactory
     private function matchSomeSubnet(array $subnets, string $taskName): bool
     {
         foreach ($subnets as $subnet) {
-            if (preg_match($subnet, $taskName)) {
+            if (preg_match('#' . $subnet . '#', $taskName)) {
                 return true;
             }
         }
