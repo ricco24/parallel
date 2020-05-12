@@ -7,6 +7,8 @@
 - List of task which ran with done tasks
 - Tests
 - Added sendMessage() method to ProgressTask and BatchProgressTask
+- Check dependencies name before start
+- Subnet option to run command
 
 ### Changed
 - Custom log replaced with PSR log interfaces
