@@ -28,6 +28,10 @@ $parallel->addTask(new \Parallel\UsersTask('task:user'));
 $parallel->addTask(new \Parallel\ArticlesTask('task:articles'), ['task:admin', 'task:user']);
 $parallel->addTask(new \Parallel\CategoriesTask('task:categories'));
 
+// Some tasks can be too much resource expensive, so we can define how many tasks can run along this task.
+// If we setup 0, this task will be run alone although we setup 5 as global max concurrent
+$parallel->addTask(new \Parallel\ArticleCategoriesTask('task:articlesCategories'), 0);
+
 // Run symfony application under hood
 $parallel->runConsoleApp();
 
@@ -39,26 +43,12 @@ php command.php parallel:run
 ```
 
 ### Run only subnet of registered tasks
-Sometimes you want to run only subnet of registered task (eg. in development).
-
-For this purpose use ```--subnet``` option in ```parallel:run``` command.
+Sometimes you want to run only subnet of registered task (eg. in development). For this purpose use ```--subnet``` option in ```parallel:run``` command. 
+--subnet option is validated as regexp and accept multiple values. **Also all dependencies that doesn't match any of subnet regexp is removed from matched tasks.**
  
 ```sh
 # This command run only task:user and task:categories tasks
 php command.php parallel:run --subnet task:user$ --subnet task:categories$
-```
-
---subnet option is validated as regexp and accept multiple values.
-**Also all dependencies that doesn't match any of subnet regexp is removed from matched tasks.**
-
-### Resource expensive tasks
-
-Some tasks can be too much resource expensive, so we can define how many tasks can run along this task.
-If we setup 0, this task will be run alone although we setup 5 as global max concurrent
-
-```php
-<?php
-$parallel->addTask(new \Parallel\ArticleCategoriesTask('task:articlesCategories'), 0);
 ```
 
 ### Logging
@@ -90,8 +80,11 @@ If you want to do something with Parallel you need to implement new task and reg
 ### Task types
 
 #### SimpleTask
+
 Suitable for tasks with static input data processing.
+
 ```php
+<?php
 class ImplementedSimpleTask extends SimpleTask
 {
     protected function processTask(InputInterface $input, OutputInterface $output): TaskResult
@@ -103,10 +96,12 @@ class ImplementedSimpleTask extends SimpleTask
 ```
 
 #### ProgressTask
+
 Suitable if you need to process each item from a medium dataset separately. All source items are
 provided at once. In some cases it can be too expensive for memory (see BatchProgressTask).
-```php
 
+```php
+<?php
 class ImplementedProgressTask extends ProgressTask
 {
     protected function items(): iterable
@@ -134,9 +129,12 @@ class ImplementedProgressTask extends ProgressTask
 ```
 
 #### BatchProgressTask
+
 Most advanced task. Suitable if you need to process each item from a **large** dataset separately.
 Items can be provided and processed in batches.
+
 ```php
+<?php
 class ImplementedBatchProgressTask extends BatchProgressTask
 {
     protected function startup(): void
