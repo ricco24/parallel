@@ -4,18 +4,22 @@ namespace Parallel;
 
 use Parallel\TaskOutput\BaseTaskOutput;
 use Parallel\TaskOutput\TaskOutput;
+use Parallel\TaskResult\BaseTaskResult;
 use Parallel\TaskResult\ErrorResult;
 use Parallel\TaskResult\SkipResult;
 use Parallel\TaskResult\TaskResult;
+use Psr\Log\LoggerAwareTrait;
+use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use LogicException;
 use Throwable;
 
 abstract class Task extends Command
 {
+    use LoggerAwareTrait;
+
     /** @var float */
     private $startTime = 0.0;
 
@@ -25,15 +29,13 @@ abstract class Task extends Command
     /** @var OutputInterface */
     private $output;
 
-    /** @var string */
-    private $logDir = '';
-
     /**
-     * Base task configuration
+     * @param string|null $name
      */
-    public function configure()
+    public function __construct(string $name = null)
     {
-        $this->addOption('log_dir', null, InputOption::VALUE_REQUIRED, 'Log dir path');
+        parent::__construct($name);
+        $this->logger = new NullLogger();
     }
 
     /**
@@ -98,7 +100,7 @@ abstract class Task extends Command
     }
 
     /**
-     * No progress start end
+     * No progress task end
      * @param array $data
      */
     protected function notifyEnd(array $data = []): void
@@ -115,7 +117,6 @@ abstract class Task extends Command
     {
         $this->output = $output;
         $this->taskOutput = new BaseTaskOutput();
-        $this->logDir = $input->getOption('log_dir') ? rtrim($input->getOption('log_dir'), '/') : '';
         $this->start();
 
         try {
@@ -134,23 +135,28 @@ abstract class Task extends Command
     protected function logTaskResultToFile(TaskResult $taskResult): void
     {
         if (($taskResult instanceof SkipResult) && !empty($taskResult->getMessage())) {
-            $this->logToFile($taskResult->getMessage(), 'skip');
+            $this->logger->info($taskResult->getMessage(), $this->getLogContext($taskResult));
         } else if ($taskResult instanceof ErrorResult) {
-            $this->logToFile($taskResult->getMessage(), 'error');
+            $this->logger->error($taskResult->getMessage(), $this->getLogContext($taskResult));
         }
     }
 
     /**
-     * @param string $line
-     * @param string $type
+     * @param BaseTaskResult|null $result
+     * @return array
      */
-    protected function logToFile(string $line, string $type): void
+    protected function getLogContext(BaseTaskResult $result = null): array
     {
-        if (!$this->logDir) {
-            return;
+        $result = [
+            'task' => $this->getName(),
+            'result' => $result ? $result->getShortName() : null
+        ];
+
+        if ($result instanceof ErrorResult) {
+            $result['exception'] = $result->getThrowable();
         }
 
-        file_put_contents($this->logDir . '/' . $this->getSanitizedName() . '_' . $type, "\n[" . date('d.m.Y H:i:s') . ']: ' . $line, FILE_APPEND);
+        return $result;
     }
 
     /**

@@ -14,4 +14,9 @@ interface TaskResult
      * @return int
      */
     public function getCode(): int;
+
+    /**
+     * @return string
+     */
+    public function getShortName(): string;
 }

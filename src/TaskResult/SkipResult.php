@@ -12,4 +12,12 @@ class SkipResult extends BaseTaskResult
     {
         return 50;
     }
+
+    /**
+     * @return string
+     */
+    public function getShortName(): string
+    {
+        return 'skip';
+    }
 }

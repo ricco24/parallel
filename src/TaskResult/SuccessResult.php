@@ -34,4 +34,12 @@ class SuccessResult extends BaseTaskResult
     {
         return 0;
     }
+
+    /**
+     * @return string
+     */
+    public function getShortName(): string
+    {
+        return 'success';
+    }
 }

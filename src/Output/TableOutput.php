@@ -20,7 +20,16 @@ class TableOutput implements Output
      */
     public function startMessage(OutputInterface $output): void
     {
-        $output->writeln('Starting parallel task processing ...');
+        $output->writeln("\nStarting parallel task processing ...\n");
+    }
+
+    /**
+     * @param OutputInterface $output
+     * @param string $error
+     */
+    public function errorMessage(OutputInterface $output, string $error): void
+    {
+        $output->writeln("\n<error>" . $error . "</error>\n");
     }
 
     /**
@@ -63,8 +72,8 @@ class TableOutput implements Output
 
     /**
      * @param OutputInterface $output
-     * @param array $stacked
-     * @param array $running
+     * @param TaskData[] $stacked
+     * @param TaskData[] $running
      */
     private function renderStackedTable(OutputInterface $output, array $stacked, array $running): void
     {
@@ -103,9 +112,9 @@ class TableOutput implements Output
 
     /**
      * @param OutputInterface $output
-     * @param array $all
-     * @param array $running
-     * @param array $done
+     * @param TaskData[] $all
+     * @param TaskData[] $running
+     * @param TaskData[] $done
      * @param float $elapsedTime
      */
     private function renderMainTable(OutputInterface $output, array $all, array $running, array $done, float $elapsedTime): void
@@ -168,7 +177,7 @@ class TableOutput implements Output
 
     /**
      * @param TableHelper $table
-     * @param array $rows
+     * @param TaskData[] $rows
      * @param int $avgMemoryUsage
      * @param array $total
      */
@@ -203,13 +212,18 @@ class TableOutput implements Output
 
     /**
      * @param TableHelper $table
-     * @param array $rows
+     * @param TaskData[] $rows
      * @param int $avgMemoryUsage
      * @param array $total
      */
     private function renderDoneTasks(Table $table, array $rows, int $avgMemoryUsage, array &$total): void
     {
         foreach ($rows as $rowTitle => $row) {
+            $rowMessage = $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : '';
+            if ($row->getExtra('error', 0) && $row->getExtra('message', '')) {
+                $rowMessage .= ". " . $row->getExtra('message', '');
+            }
+
             $table->addRow([
                 $this->formatTitle($rowTitle, $row),
                 number_format($row->getCount()),
@@ -220,7 +234,7 @@ class TableOutput implements Output
                 $this->progress($row->getProgress()),
                 TimeHelper::formatTime($row->getDuration()),
                 $this->formatMemory($row, $avgMemoryUsage),
-                $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : ''
+                $rowMessage
             ]);
 
             $total['count'] += $row->getCount();
@@ -275,19 +289,19 @@ class TableOutput implements Output
     private function formatTitle(string $rowTitle, TaskData $row): string
     {
         if (!$row->getStackedTask()->isInStatus(StackedTask::STATUS_DONE)) {
-            return "\xF0\x9F\x95\x92 " . $rowTitle;
+            return $rowTitle;
         }
 
         if ($row->getExtra('error', 0) != 0) {
-            return $this->tag('red', "\xF0\x9F\x97\xB4 " . $rowTitle);
+            return $this->tag('red', "\xE2\x9C\x96 " . $rowTitle);
         }
 
         if ($row->getCodeErrorsCount() != 0) {
-            return $this->tag('yellow', "\xF0\x9F\x97\xB2 " . $rowTitle);
+            return $this->tag('yellow', "\xE2\x9C\x96 " . $rowTitle);
         }
 
         if ($row->getExtra('success', 0) + $row->getExtra('skip', 0) == $row->getCount()) {
-            return $this->tag('green', "\xF0\x9F\x97\xB8 " . $rowTitle);
+            return $this->tag('green', "\xE2\x9C\x94 " . $rowTitle);
         }
 
         return $rowTitle;

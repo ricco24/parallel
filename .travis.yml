@@ -4,8 +4,10 @@ services:
     - mysql
 
 php:
-    - 5.6
-    - 7.0
+    - 7.1
+    - 7.2
+    - 7.3
+    - 7.4
 
 sudo: false
 
@@ -16,10 +18,10 @@ before_script:
 script:
     - mkdir -p build/logs
     - php vendor/bin/phpcs src/ --standard=PSR2 -n
-    - mysql -u root -e "DROP DATABASE IF EXISTS ferryman_test"
-    - mysql -u root -e "CREATE DATABASE ferryman_test"
-    - mysql -u root ferryman_test < tests/Data/structure.sql
-    - vendor/bin/phpunit --coverage-text --coverage-clover=coverage.clover --bootstrap=tests/bootstrapCI.php
+    - mysql -u root -e "DROP DATABASE IF EXISTS parallel_test"
+    - mysql -u root -e "CREATE DATABASE parallel_test"
+#    - mysql -u root parallel_test < tests/Data/structure.sql
+    - vendor/bin/phpunit --coverage-text --coverage-clover=coverage.clover
 
 after_script:
     - wget https://scrutinizer-ci.com/ocular.phar

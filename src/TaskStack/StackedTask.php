@@ -20,20 +20,32 @@ class StackedTask
     /** @var DateTime|null */
     private $finishedAt;
 
+    /** @var DateTime|null */
+    private $startAt;
+
     /** @var array */
     private $runAfter = [];
+
+    /** @var int|null */
+    private $maxConcurrentTasksCount;
 
     /** @var array */
     private $currentRunAfter = [];
 
+    /** @var array */
+    private $runningWith = [];
+
     /**
+     * StackedTask constructor.
      * @param Task $task
      * @param array $runAfter
+     * @param int|null $maxConcurrentTasksCount
      */
-    public function __construct(Task $task, array $runAfter = [])
+    public function __construct(Task $task, array $runAfter = [], ?int $maxConcurrentTasksCount = null)
     {
         $this->task = $task;
         $this->runAfter = $this->currentRunAfter = array_combine($runAfter, $runAfter);
+        $this->maxConcurrentTasksCount = $maxConcurrentTasksCount;
         $this->status = self::STATUS_STACKED;
     }
 
@@ -44,6 +56,9 @@ class StackedTask
     public function setStatus(string $status): StackedTask
     {
         $this->status = $status;
+        if ($this->status === self::STATUS_RUNNING) {
+            $this->startAt = new DateTime();
+        }
         if ($this->status === self::STATUS_DONE) {
             $this->finishedAt = new DateTime();
         }
@@ -78,9 +93,25 @@ class StackedTask
     /**
      * @return DateTime|null
      */
+    public function getStartAt(): ?DateTime
+    {
+        return $this->startAt;
+    }
+
+    /**
+     * @return DateTime|null
+     */
     public function getFinishedAt(): ?DateTime
     {
         return $this->finishedAt;
+    }
+
+    /**
+     * @return int|null
+     */
+    public function getMaxConcurrentTasksCount(): ?int
+    {
+        return $this->maxConcurrentTasksCount;
     }
 
     /**
@@ -110,5 +141,32 @@ class StackedTask
     public function isRunnable(): bool
     {
         return ! ((bool) count($this->currentRunAfter));
+    }
+
+    /**
+     * @param StackedTask $stackedTask
+     */
+    public function runningWithStart(StackedTask $stackedTask): void
+    {
+        $this->runningWith[$stackedTask->getTask()->getName()] = [
+            'from' => new DateTime(),
+            'to' => null
+        ];
+    }
+
+    /**
+     * @param StackedTask $stackedTask
+     */
+    public function runningWithStop(StackedTask $stackedTask): void
+    {
+        $this->runningWith[$stackedTask->getTask()->getName()]['to'] = new DateTime();
+    }
+
+    /**
+     * @return array
+     */
+    public function getRunningWith(): array
+    {
+        return $this->runningWith;
     }
 }

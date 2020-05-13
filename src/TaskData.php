@@ -169,4 +169,12 @@ class TaskData
     {
         return $this->extra[$key] ?? $default;
     }
+
+    /**
+     * @return array
+     */
+    public function getAllExtra(): array
+    {
+        return $this->extra;
+    }
 }
