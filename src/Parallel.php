@@ -57,9 +57,9 @@ class Parallel
     private $logFile;
 
     /**
-     * @param string $binDirPath
-     * @param string $fileName
-     * @param int $concurrent
+     * @param string $binDirPath    Path to directory with parallel binary
+     * @param string $fileName      Parallel binary filename
+     * @param int $concurrent       Max count of concurrent tasks
      * @param string $logDir
      */
     public function __construct(string $binDirPath, string $fileName, int $concurrent = 3, string $logDir = '')
