@@ -53,17 +53,17 @@ php command.php parallel:run --subnet task:user$ --subnet task:categories$
 
 ### Logging
 
-PSR logging is implemented. So we can use ```monolog/monolog```.
+PSR logger is implemented. So we can use ```monolog/monolog```.
 
 ```php
 <?php
-// Setup monolog logger
+// Setup PSR logger
 // ...
-$parallel->setLogger($monologLogger);
+$parallel->setLogger($psrLogger);
 ```
 
 ### Analyze command
-Parallel can visualize tasks dependencies graph. All you have to do is setup analyze dir.
+Parallel can visualize tasks dependencies graph. All you have to do is set analyze dir. Output file in HTML format will be generated to setup directory.
 ```php
 <?php
 $parallel->setAnalyzeDir(__DIR__ . '/../log');
