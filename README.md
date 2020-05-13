@@ -75,7 +75,7 @@ php command.php analyze:graph
 ```
 
 ## Tasks
-If you want to do something with Parallel you need to implement new task and register it to application.
+Every task has to return some kind of result (SuccessResult, SkipResult, ErrorResult) as the result of task/item processing.
 
 ### Task types
 
