@@ -33,12 +33,31 @@ $parallel->runConsoleApp();
 
 ```
 
+Now simply run
+```sh
+php command.php parallel:run
+```
+
+### Run only subnet of registered tasks
+Sometimes you want to run only subnet of registered task (eg. in development).
+
+For this purpose use ```--subnet``` option in ```parallel:run``` command.
+ 
+```sh
+# This command run only task:user and task:categories tasks
+php command.php parallel:run --subnet task:user$ --subnet task:categories$
+```
+
+--subnet option is validated as regexp and accept multiple values.
+**Also all dependencies that doesn't match any of subnet regexp is removed from matched tasks.**
+
 ### Resource expensive tasks
 
 Some tasks can be too much resource expensive, so we can define how many tasks can run along this task.
 If we setup 0, this task will be run alone although we setup 5 as global max concurrent
 
 ```php
+<?php
 $parallel->addTask(new \Parallel\ArticleCategoriesTask('task:articlesCategories'), 0);
 ```
 
@@ -47,6 +66,7 @@ $parallel->addTask(new \Parallel\ArticleCategoriesTask('task:articlesCategories'
 PSR logging is implemented. So we can use ```monolog/monolog```.
 
 ```php
+<?php
 // Setup monolog logger
 // ...
 $parallel->setLogger($monologLogger);
@@ -55,17 +75,13 @@ $parallel->setLogger($monologLogger);
 ### Analyze command
 Parallel can visualize tasks dependencies graph. All you have to do is setup analyze dir.
 ```php
+<?php
 $parallel->setAnalyzeDir(__DIR__ . '/../log');
 ```
 
 ```sh
 # Now you can run
 php command.php analyze:graph
-```
-
-## Run
-```sh
-php command.php parallel:run
 ```
 
 ## Tasks
