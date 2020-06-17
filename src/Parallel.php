@@ -225,9 +225,7 @@ class Parallel
                         ]);
 
                         foreach ($lines as $errorLine) {
-                            $this->logger->error(StringHelper::sanitize($errorLine), [
-                                'type' => $stackedTask->getTask()->getSanitizedName()
-                            ]);
+                            $this->logger->log('errors', $stackedTask->getTask()->getSanitizedName(), StringHelper::sanitize($errorLine), [], true);
                         }
 
                         $this->output->printToOutput($output, $this->data, microtime(true) - $start);
@@ -241,9 +239,7 @@ class Parallel
                     foreach (explode(';', $lastLine) as $statement) {
                         $explodedStatement = explode(':', $statement, 2);
                         if (count($explodedStatement) != 2) {
-                            $this->logger->error($statement, [
-                                'type' => $stackedTask->getTask()->getSanitizedName()
-                            ]);
+                            $this->logger->log('errors', $stackedTask->getTask()->getSanitizedName(), $statement, [], true);
                             $this->buildTaskData($stackedTask, [
                                 'code_errors_count' => 1
                             ]);
@@ -324,9 +320,6 @@ class Parallel
             'with_tasks' => $withTasks
         ];
 
-        $this->logger->info(json_encode($data), [
-            'type' => 'task_stats',
-            'id' => $stackedTask->getTask()->getName()
-        ], true);
+        $this->logger->log('task_stats', $stackedTask->getTask()->getName(), json_encode($data), [], true);
     }
 }
