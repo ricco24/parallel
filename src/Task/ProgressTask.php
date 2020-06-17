@@ -61,7 +61,7 @@ abstract class ProgressTask extends BaseTask
 
             $this->processedItems++;
             $this->processResult($taskResult);
-            $this->logTaskResultToFile($taskResult);
+            $this->logTaskResult($taskResult);
             $this->sendNotify();
         }
 

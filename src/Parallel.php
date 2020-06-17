@@ -5,13 +5,13 @@ namespace Parallel;
 use Parallel\Command\AnalyzeGraphCommand;
 use Parallel\Command\RunCommand;
 use Parallel\Helper\StringHelper;
+use Parallel\Logger\Logger;
+use Parallel\Logger\NullLogger;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
 use Parallel\TaskStack\StackedTask;
 use Parallel\TaskStack\TaskStack;
 use Parallel\TaskStack\TaskStackFactory;
-use Psr\Log\LoggerAwareTrait;
-use Psr\Log\NullLogger;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -21,8 +21,6 @@ use Exception;
 
 class Parallel
 {
-    use LoggerAwareTrait;
-
     /** @var string */
     private $binDirPath;
 
@@ -32,8 +30,8 @@ class Parallel
     /** @var int */
     private $concurrent;
 
-    /** @var string */
-    private $logDir;
+    /** @var Logger */
+    private $logger;
 
     /** @var array */
     private $tasksData = [];
@@ -53,21 +51,16 @@ class Parallel
     /** @var array */
     private $data = [];
 
-    /** @var string|null */
-    private $logFile;
-
     /**
      * @param string $binDirPath    Path to directory with parallel binary
      * @param string $fileName      Parallel binary filename
      * @param int $concurrent       Max count of concurrent tasks
-     * @param string $logDir
      */
-    public function __construct(string $binDirPath, string $fileName, int $concurrent = 3, string $logDir = '')
+    public function __construct(string $binDirPath, string $fileName, int $concurrent = 3)
     {
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
         $this->concurrent = $concurrent;
-        $this->logDir = rtrim($logDir, '/');
         $this->logger = new NullLogger();
         $this->app = new Application();
         $this->app->add(new RunCommand($this));
@@ -76,6 +69,14 @@ class Parallel
         // Defaults
         $this->taskStackFactory = new TaskStackFactory();
         $this->output = new TableOutput();
+    }
+
+    /**
+     * @param Logger $logger
+     */
+    public function setLogger(Logger $logger): void
+    {
+        $this->logger = $logger;
     }
 
     /**
@@ -151,6 +152,7 @@ class Parallel
     /**
      * @param InputInterface $input
      * @param OutputInterface $output
+     * @throws Exception
      */
     public function execute(InputInterface $input, OutputInterface $output): void
     {
@@ -163,9 +165,6 @@ class Parallel
 
         $start = microtime(true);
         $this->output->startMessage($output);
-
-        @mkdir(sprintf("%s/stats", $this->logDir));
-        $this->logFile = sprintf("%s/stats/%s.log", $this->logDir, time());
 
         // Add all tasks to tasks data array
         foreach ($this->taskStack->getStackedTasks() as $stashedTask) {
@@ -226,7 +225,9 @@ class Parallel
                         ]);
 
                         foreach ($lines as $errorLine) {
-                            $this->logger->error($stackedTask->getTask()->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine));
+                            $this->logger->error(StringHelper::sanitize($errorLine), [
+                                'type' => $stackedTask->getTask()->getSanitizedName()
+                            ]);
                         }
 
                         $this->output->printToOutput($output, $this->data, microtime(true) - $start);
@@ -240,7 +241,9 @@ class Parallel
                     foreach (explode(';', $lastLine) as $statement) {
                         $explodedStatement = explode(':', $statement, 2);
                         if (count($explodedStatement) != 2) {
-                            $this->logger->error($stackedTask->getTask()->getSanitizedName() . ': Cannot parse statement: ' . $statement);
+                            $this->logger->error($statement, [
+                                'type' => $stackedTask->getTask()->getSanitizedName()
+                            ]);
                             $this->buildTaskData($stackedTask, [
                                 'code_errors_count' => 1
                             ]);
@@ -295,13 +298,7 @@ class Parallel
      */
     private function printTaskStatsToFile(StackedTask $stackedTask): void
     {
-        if (empty($this->logDir)) {
-            return;
-        }
-
-        $fileContent = @file_get_contents($this->logFile);
-        $data = $fileContent ? json_decode($fileContent, true) : [];
-
+        $data = [];
         $withTasks = [];
         if (count($stackedTask->getRunningWith())) {
             foreach ($stackedTask->getRunningWith() as $name => $value) {
@@ -327,6 +324,9 @@ class Parallel
             'with_tasks' => $withTasks
         ];
 
-        file_put_contents($this->logFile, json_encode($data));
+        $this->logger->info(json_encode($data), [
+            'type' => 'task_stats',
+            'id' => $stackedTask->getTask()->getName()
+        ], true);
     }
 }

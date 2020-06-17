@@ -2,14 +2,14 @@
 
 namespace Parallel;
 
+use Parallel\Logger\Logger;
+use Parallel\Logger\NullLogger;
 use Parallel\TaskOutput\BaseTaskOutput;
 use Parallel\TaskOutput\TaskOutput;
 use Parallel\TaskResult\BaseTaskResult;
 use Parallel\TaskResult\ErrorResult;
 use Parallel\TaskResult\SkipResult;
 use Parallel\TaskResult\TaskResult;
-use Psr\Log\LoggerAwareTrait;
-use Psr\Log\NullLogger;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -18,8 +18,6 @@ use Throwable;
 
 abstract class Task extends Command
 {
-    use LoggerAwareTrait;
-
     /** @var float */
     private $startTime = 0.0;
 
@@ -29,6 +27,9 @@ abstract class Task extends Command
     /** @var OutputInterface */
     private $output;
 
+    /** @var Logger */
+    protected $logger;
+
     /**
      * @param string|null $name
      */
@@ -36,6 +37,14 @@ abstract class Task extends Command
     {
         parent::__construct($name);
         $this->logger = new NullLogger();
+    }
+
+    /**
+     * @param Logger $logger
+     */
+    public function setLogger(Logger $logger): void
+    {
+        $this->logger = $logger;
     }
 
     /**
@@ -125,14 +134,15 @@ abstract class Task extends Command
             $taskResult = new ErrorResult($e->getMessage());
         }
 
-        $this->logTaskResultToFile($taskResult);
+        $this->logTaskResult($taskResult);
+        $this->logger->flush();
         return $taskResult->getCode();
     }
 
     /**
      * @param TaskResult $taskResult
      */
-    protected function logTaskResultToFile(TaskResult $taskResult): void
+    protected function logTaskResult(TaskResult $taskResult): void
     {
         if (($taskResult instanceof SkipResult) && !empty($taskResult->getMessage())) {
             $this->logger->info($taskResult->getMessage(), $this->getLogContext($taskResult));
@@ -148,13 +158,13 @@ abstract class Task extends Command
     protected function getLogContext(BaseTaskResult $result = null): array
     {
         $result = [
-            'task' => $this->getName(),
+            'type' => $this->getName(),
             'result' => $result ? $result->getShortName() : null
         ];
 
-        if ($result instanceof ErrorResult) {
-            $result['exception'] = $result->getThrowable();
-        }
+//        if ($result instanceof ErrorResult) {
+//            $result['exception'] = $result->getThrowable();
+//        }
 
         return $result;
     }

@@ -69,7 +69,7 @@ abstract class BatchProgressTask extends BaseTask
                     $taskResult = new ErrorResult($e->getMessage(), $e);
                 }
 
-                $this->logTaskResultToFile($taskResult);
+                $this->logTaskResult($taskResult);
                 if ($taskResult instanceof SuccessResult) {
                     $itemsToProcess[] = $taskResult->getData();
                 } else {

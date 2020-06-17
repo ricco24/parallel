@@ -26,7 +26,7 @@ abstract class SimpleTask extends BaseTask
         } catch (Throwable $e) {
             $result = new ErrorResult($e->getMessage(), $e);
         }
-        $this->logTaskResultToFile($result);
+        $this->logTaskResult($result);
         $this->notifyEnd([
             'success' => $result instanceof SuccessResult ? 1 : 0,
             'skip' => $result instanceof SkipResult ? 1 : 0,
