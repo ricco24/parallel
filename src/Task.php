@@ -6,7 +6,6 @@ use Parallel\Logger\Logger;
 use Parallel\Logger\NullLogger;
 use Parallel\TaskOutput\BaseTaskOutput;
 use Parallel\TaskOutput\TaskOutput;
-use Parallel\TaskResult\BaseTaskResult;
 use Parallel\TaskResult\ErrorResult;
 use Parallel\TaskResult\SkipResult;
 use Parallel\TaskResult\TaskResult;
@@ -145,28 +144,10 @@ abstract class Task extends Command
     protected function logTaskResult(TaskResult $taskResult): void
     {
         if (($taskResult instanceof SkipResult) && !empty($taskResult->getMessage())) {
-            $this->logger->info($taskResult->getMessage(), $this->getLogContext($taskResult));
+            $this->logger->log($this->getName() . '#skip', $taskResult->getKey(), $taskResult->getMessage());
         } else if ($taskResult instanceof ErrorResult) {
-            $this->logger->error($taskResult->getMessage(), $this->getLogContext($taskResult));
+            $this->logger->log($this->getName() . '#error', $taskResult->getKey(), $taskResult->getMessage());
         }
-    }
-
-    /**
-     * @param BaseTaskResult|null $result
-     * @return array
-     */
-    protected function getLogContext(BaseTaskResult $result = null): array
-    {
-        $result = [
-            'type' => $this->getName(),
-            'result' => $result ? $result->getShortName() : null
-        ];
-
-//        if ($result instanceof ErrorResult) {
-//            $result['exception'] = $result->getThrowable();
-//        }
-
-        return $result;
     }
 
     /**

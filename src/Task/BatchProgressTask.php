@@ -40,7 +40,7 @@ abstract class BatchProgressTask extends BaseTask
         } catch (Throwable $e) {
             $this->error = 1;
             $this->sendNotify(['message' => 'Startup script failed']);
-            return new ErrorResult($e->getMessage(), $e);
+            return new ErrorResult($e->getMessage(), 'startup_script_failed', $e);
         }
 
         try {
@@ -49,7 +49,7 @@ abstract class BatchProgressTask extends BaseTask
         } catch (Throwable $e) {
             $this->error = 1;
             $this->sendNotify(['message' => 'Error while counting items']);
-            return new ErrorResult($e->getMessage(), $e);
+            return new ErrorResult($e->getMessage(),'error_while_counting_items', $e);
         }
 
         try {
@@ -57,7 +57,7 @@ abstract class BatchProgressTask extends BaseTask
         } catch (Throwable $e) {
             $this->error = 1;
             $this->sendNotify(['message' => 'Error while fetching items']);
-            return new ErrorResult($e->getMessage(), $e);
+            return new ErrorResult($e->getMessage(), 'error_while_fetching_items', $e);
         }
 
         while (count($items)) {
@@ -66,7 +66,7 @@ abstract class BatchProgressTask extends BaseTask
                 try {
                     $taskResult = $this->processItem($item);
                 } catch (Throwable $e) {
-                    $taskResult = new ErrorResult($e->getMessage(), $e);
+                    $taskResult = new ErrorResult($e->getMessage(), sprintf("general_%d_%d", microtime(true), rand(1, 9999)), $e);
                 }
 
                 $this->logTaskResult($taskResult);

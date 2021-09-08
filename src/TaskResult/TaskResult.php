@@ -10,6 +10,11 @@ interface TaskResult
     public function getMessage(): string;
 
     /**
+     * @return mixed
+     */
+    public function getKey();
+
+    /**
      * Result return code
      * @return int
      */

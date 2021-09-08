@@ -10,11 +10,12 @@ class SuccessResult extends BaseTaskResult
     /**
      * SuccessResult constructor.
      * @param array $data
+     * @param mixed $key
      * @param string $message
      */
-    public function __construct(array $data = [], string $message = '')
+    public function __construct(array $data = [], $key = null, string $message = '')
     {
-        parent::__construct($message);
+        parent::__construct($message, $key);
         $this->data = $data;
     }
 
