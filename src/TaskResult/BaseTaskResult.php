@@ -7,12 +7,17 @@ abstract class BaseTaskResult implements TaskResult
     /** @var string */
     private $message;
 
+    /** @var array */
+    private $info = [];
+
     /**
      * @param string $message
+     * @param array $info
      */
-    public function __construct(string $message = '')
+    public function __construct(string $message = '', array $info = [])
     {
         $this->message = $message;
+        $this->info = $info;
     }
 
     /**
@@ -21,5 +26,10 @@ abstract class BaseTaskResult implements TaskResult
     public function getMessage(): string
     {
         return $this->message;
+    }
+
+    public function getInfo(): array
+    {
+        return $this->info;
     }
 }

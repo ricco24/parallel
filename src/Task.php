@@ -2,6 +2,8 @@
 
 namespace Parallel;
 
+use Parallel\Logging\TaskLogger\TaskLogger;
+use Parallel\Logging\TaskLogger\TaskLoggerFactory;
 use Parallel\TaskOutput\BaseTaskOutput;
 use Parallel\TaskOutput\TaskOutput;
 use Parallel\TaskResult\BaseTaskResult;
@@ -20,6 +22,12 @@ abstract class Task extends Command
 {
     use LoggerAwareTrait;
 
+    /** @var TaskLoggerFactory */
+    private $taskLoggerFactory;
+
+    /** @var TaskLogger|null */
+    private $taskLogger;
+
     /** @var float */
     private $startTime = 0.0;
 
@@ -36,6 +44,14 @@ abstract class Task extends Command
     {
         parent::__construct($name);
         $this->logger = new NullLogger();
+    }
+
+    /**
+     * @param TaskLoggerFactory $taskLoggerFactory
+     */
+    public function setTaskLoggerFactory(TaskLoggerFactory $taskLoggerFactory)
+    {
+        $this->taskLoggerFactory = $taskLoggerFactory;
     }
 
     /**
@@ -118,42 +134,44 @@ abstract class Task extends Command
         $this->output = $output;
         $this->taskOutput = new BaseTaskOutput();
         $this->start();
+        $this->taskLogger = $this->taskLoggerFactory->create($this->getName());
+        $this->taskLogger->prepare();
 
         try {
             $taskResult = $this->process($input, $output);
         } catch (Throwable $e) {
-            $taskResult = new ErrorResult($e->getMessage());
+            $taskResult = new ErrorResult($e->getMessage(), [], $e);
+            $this->logTaskError($taskResult);
         }
 
-        $this->logTaskResultToFile($taskResult);
+        $this->taskLogger->process();
         return $taskResult->getCode();
     }
 
-    /**
-     * @param TaskResult $taskResult
-     */
-    protected function logTaskResultToFile(TaskResult $taskResult): void
+    protected function logTaskError(ErrorResult $taskResult): void
     {
-        if (($taskResult instanceof SkipResult) && !empty($taskResult->getMessage())) {
-            $this->logger->info($taskResult->getMessage(), $this->getLogContext($taskResult));
-        } else if ($taskResult instanceof ErrorResult) {
-            $this->logger->error($taskResult->getMessage(), $this->getLogContext($taskResult));
-        }
+        $this->logger->error($taskResult->getMessage(), $this->getLogContext($taskResult));
+    }
+
+    protected function logTaskResult(TaskResult $taskResult): void
+    {
+        $this->taskLogger->addLog($taskResult->getShortName(), $taskResult->getMessage(), $taskResult->getInfo());
     }
 
     /**
-     * @param BaseTaskResult|null $result
+     * @param BaseTaskResult|null $taskResult
      * @return array
      */
-    protected function getLogContext(BaseTaskResult $result = null): array
+    protected function getLogContext(BaseTaskResult $taskResult = null): array
     {
         $result = [
             'task' => $this->getName(),
-            'result' => $result ? $result->getShortName() : null
+            'result' => $taskResult ? $taskResult->getShortName() : null,
+            'info' => $taskResult->getInfo()
         ];
 
-        if ($result instanceof ErrorResult) {
-            $result['exception'] = $result->getThrowable();
+        if ($taskResult instanceof ErrorResult) {
+            $result['exception'] = $taskResult->getThrowable();
         }
 
         return $result;

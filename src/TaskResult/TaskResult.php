@@ -10,6 +10,11 @@ interface TaskResult
     public function getMessage(): string;
 
     /**
+     * @return array
+     */
+    public function getInfo(): array;
+
+    /**
      * Result return code
      * @return int
      */

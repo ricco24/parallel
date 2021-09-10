@@ -11,11 +11,12 @@ class ErrorResult extends BaseTaskResult
 
     /**
      * @param string $message
+     * @param array $info
      * @param Throwable|null $throwable
      */
-    public function __construct(string $message = '', Throwable $throwable = null)
+    public function __construct(string $message = '', array $info = [], Throwable $throwable = null)
     {
-        parent::__construct($message);
+        parent::__construct($message, $info);
         $this->throwable = $throwable;
     }
 

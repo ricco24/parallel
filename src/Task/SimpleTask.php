@@ -17,6 +17,7 @@ abstract class SimpleTask extends BaseTask
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return TaskResult
+     * @throws Throwable
      */
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
@@ -24,9 +25,15 @@ abstract class SimpleTask extends BaseTask
         try {
             $result = $this->processTask($input, $output);
         } catch (Throwable $e) {
-            $result = new ErrorResult($e->getMessage(), $e);
+            $this->notifyEnd([
+                'success' => 0,
+                'skip' => 0,
+                'error' => 1
+            ]);
+            throw $e;
         }
-        $this->logTaskResultToFile($result);
+
+        $this->logTaskResult($result);
         $this->notifyEnd([
             'success' => $result instanceof SuccessResult ? 1 : 0,
             'skip' => $result instanceof SkipResult ? 1 : 0,

@@ -32,6 +32,7 @@ abstract class ProgressTask extends BaseTask
      * @param InputInterface $input
      * @param OutputInterface $output
      * @return TaskResult
+     * @throws Throwable
      */
     protected function process(InputInterface $input, OutputInterface $output): TaskResult
     {
@@ -41,7 +42,7 @@ abstract class ProgressTask extends BaseTask
         } catch (Throwable $e) {
             $this->error = 1;
             $this->sendNotify(['message' => 'Error while counting items']);
-            return new ErrorResult($e->getMessage(), $e);
+            throw $e;
         }
 
         try {
@@ -49,19 +50,19 @@ abstract class ProgressTask extends BaseTask
         } catch (Throwable $e) {
             $this->error = 1;
             $this->sendNotify(['message' => 'Error while fetching items']);
-            return new ErrorResult($e->getMessage(), $e);
+            throw $e;
         }
 
         foreach ($items as $item) {
             try {
                 $taskResult = $this->processItem($item);
             } catch (Throwable $e) {
-                $taskResult = new ErrorResult($e->getMessage(), $e);
+                $taskResult = new ErrorResult($e->getMessage(), [], $e);
             }
 
             $this->processedItems++;
             $this->processResult($taskResult);
-            $this->logTaskResultToFile($taskResult);
+            $this->logTaskResult($taskResult);
             $this->sendNotify();
         }
 

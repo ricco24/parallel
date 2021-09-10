@@ -5,6 +5,8 @@ namespace Parallel;
 use Parallel\Command\AnalyzeGraphCommand;
 use Parallel\Command\RunCommand;
 use Parallel\Helper\StringHelper;
+use Parallel\Logging\TaskLogger\NullTaskLoggerFactory;
+use Parallel\Logging\TaskLogger\TaskLoggerFactory;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
 use Parallel\TaskStack\StackedTask;
@@ -34,6 +36,9 @@ class Parallel
 
     /** @var string */
     private $logDir;
+
+    /** @var TaskLoggerFactory */
+    private $taskLoggerFactory;
 
     /** @var array */
     private $tasksData = [];
@@ -69,6 +74,7 @@ class Parallel
         $this->concurrent = $concurrent;
         $this->logDir = rtrim($logDir, '/');
         $this->logger = new NullLogger();
+        $this->taskLoggerFactory = new NullTaskLoggerFactory();
         $this->app = new Application();
         $this->app->add(new RunCommand($this));
         $this->app->add(new AnalyzeGraphCommand($this));
@@ -76,6 +82,16 @@ class Parallel
         // Defaults
         $this->taskStackFactory = new TaskStackFactory();
         $this->output = new TableOutput();
+    }
+
+    /**
+     * @param TaskLoggerFactory $taskLoggerFactory
+     * @return Parallel
+     */
+    public function setTaskLoggerFactory(TaskLoggerFactory $taskLoggerFactory): Parallel
+    {
+        $this->taskLoggerFactory = $taskLoggerFactory;
+        return $this;
     }
 
     /**
@@ -117,6 +133,7 @@ class Parallel
     public function addTask(Task $task, $runAfter = [], ?int $maxConcurrentTasksCount = null): Parallel
     {
         $task->setLogger($this->logger);
+        $task->setTaskLoggerFactory($this->taskLoggerFactory);
         $this->tasksData[] = [
             'task' => $task,
             'runAfter' => $runAfter,
