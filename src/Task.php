@@ -8,7 +8,6 @@ use Parallel\TaskOutput\BaseTaskOutput;
 use Parallel\TaskOutput\TaskOutput;
 use Parallel\TaskResult\BaseTaskResult;
 use Parallel\TaskResult\ErrorResult;
-use Parallel\TaskResult\SkipResult;
 use Parallel\TaskResult\TaskResult;
 use Psr\Log\LoggerAwareTrait;
 use Psr\Log\NullLogger;
