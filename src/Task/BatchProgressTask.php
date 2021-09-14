@@ -67,7 +67,7 @@ abstract class BatchProgressTask extends BaseTask
                 try {
                     $taskResult = $this->processItem($item);
                 } catch (Throwable $e) {
-                    $taskResult = new ErrorResult($e->getMessage(), $e);
+                    $taskResult = new ErrorResult($e->getMessage(), [], $e);
                 }
 
                 $this->logTaskResult($taskResult);
