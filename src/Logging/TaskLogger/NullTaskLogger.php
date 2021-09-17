@@ -14,7 +14,7 @@ class NullTaskLogger implements TaskLogger
     {
     }
 
-    public function prepareGlobal(): void
+    public function prepareGlobal(int $allTasksCount, array $inputSubnets): void
     {
     }
 
@@ -22,7 +22,7 @@ class NullTaskLogger implements TaskLogger
     {
     }
 
-    public function processDoneTaskData(string $name, DateTime $startAt, DateTime $endAt, int $memoryPeak, array $runWithTasks): void
+    public function processDoneTaskData(string $name, DateTime $startAt, DateTime $endAt, int $memoryPeak, array $runWithTasks, array $extra): void
     {
     }
 

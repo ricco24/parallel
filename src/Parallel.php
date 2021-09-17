@@ -167,15 +167,15 @@ class Parallel
      */
     public function execute(InputInterface $input, OutputInterface $output): void
     {
-        $this->globalTaskLogger = $this->taskLoggerFactory->create('global');
-        $this->globalTaskLogger->prepareGlobal();
-
         try {
             $this->initializeTaskStack($input->getOption('subnet'));
         } catch (TaskStackFactoryException $e) {
             $this->output->errorMessage($output, $e->getMessage());
             return;
         }
+
+        $this->globalTaskLogger = $this->taskLoggerFactory->create('global');
+        $this->globalTaskLogger->prepareGlobal(count($this->taskStack->getStackedTasks()), $input->getOption('subnet'));
 
         $start = microtime(true);
         $this->output->startMessage($output);
@@ -327,7 +327,8 @@ class Parallel
             $stackedTask->getStartAt(),
             $stackedTask->getFinishedAt(),
             $taskData->getMemoryPeak(),
-            $withTasks
+            $withTasks,
+            $taskData->getAllExtra()
         );
     }
 }
