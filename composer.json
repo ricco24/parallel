@@ -11,6 +11,7 @@
     ],
     "require": {
         "php": ">=7.1",
+        "ext-json": "*",
         "symfony/console": "^4.3",
         "symfony/process": "^4.3",
         "psr/log": "^1.1"

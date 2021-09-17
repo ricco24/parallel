@@ -2,6 +2,8 @@
 
 namespace Parallel\Logging\TaskLogger;
 
+use DateTime;
+
 class NullTaskLogger implements TaskLogger
 {
     public function prepare(): void
@@ -9,6 +11,18 @@ class NullTaskLogger implements TaskLogger
     }
 
     public function process(): void
+    {
+    }
+
+    public function prepareGlobal(): void
+    {
+    }
+
+    public function processGlobal(): void
+    {
+    }
+
+    public function processDoneTaskData(string $name, DateTime $startAt, DateTime $endAt, int $memoryPeak, array $runWithTasks): void
     {
     }
 
