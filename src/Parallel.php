@@ -5,6 +5,9 @@ namespace Parallel;
 use Parallel\Command\AnalyzeGraphCommand;
 use Parallel\Command\RunCommand;
 use Parallel\Helper\StringHelper;
+use Parallel\Logging\TaskLogger\NullTaskLoggerFactory;
+use Parallel\Logging\TaskLogger\TaskLogger;
+use Parallel\Logging\TaskLogger\TaskLoggerFactory;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
 use Parallel\TaskStack\StackedTask;
@@ -32,8 +35,8 @@ class Parallel
     /** @var int */
     private $concurrent;
 
-    /** @var string */
-    private $logDir;
+    /** @var TaskLoggerFactory */
+    private $taskLoggerFactory;
 
     /** @var array */
     private $tasksData = [];
@@ -53,22 +56,21 @@ class Parallel
     /** @var array */
     private $data = [];
 
-    /** @var string|null */
-    private $logFile;
+    /** @var TaskLogger */
+    private $globalTaskLogger;
 
     /**
      * @param string $binDirPath    Path to directory with parallel binary
      * @param string $fileName      Parallel binary filename
      * @param int $concurrent       Max count of concurrent tasks
-     * @param string $logDir
      */
-    public function __construct(string $binDirPath, string $fileName, int $concurrent = 3, string $logDir = '')
+    public function __construct(string $binDirPath, string $fileName, int $concurrent = 3)
     {
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
         $this->concurrent = $concurrent;
-        $this->logDir = rtrim($logDir, '/');
         $this->logger = new NullLogger();
+        $this->taskLoggerFactory = new NullTaskLoggerFactory();
         $this->app = new Application();
         $this->app->add(new RunCommand($this));
         $this->app->add(new AnalyzeGraphCommand($this));
@@ -76,6 +78,16 @@ class Parallel
         // Defaults
         $this->taskStackFactory = new TaskStackFactory();
         $this->output = new TableOutput();
+    }
+
+    /**
+     * @param TaskLoggerFactory $taskLoggerFactory
+     * @return Parallel
+     */
+    public function setTaskLoggerFactory(TaskLoggerFactory $taskLoggerFactory): Parallel
+    {
+        $this->taskLoggerFactory = $taskLoggerFactory;
+        return $this;
     }
 
     /**
@@ -117,6 +129,7 @@ class Parallel
     public function addTask(Task $task, $runAfter = [], ?int $maxConcurrentTasksCount = null): Parallel
     {
         $task->setLogger($this->logger);
+        $task->setTaskLoggerFactory($this->taskLoggerFactory);
         $this->tasksData[] = [
             'task' => $task,
             'runAfter' => $runAfter,
@@ -161,11 +174,11 @@ class Parallel
             return;
         }
 
+        $this->globalTaskLogger = $this->taskLoggerFactory->create('global');
+        $this->globalTaskLogger->prepareGlobal(count($this->taskStack->getStackedTasks()), $input->getOption('subnet'));
+
         $start = microtime(true);
         $this->output->startMessage($output);
-
-        @mkdir(sprintf("%s/stats", $this->logDir));
-        $this->logFile = sprintf("%s/stats/%s.log", $this->logDir, time());
 
         // Add all tasks to tasks data array
         foreach ($this->taskStack->getStackedTasks() as $stashedTask) {
@@ -194,7 +207,7 @@ class Parallel
 
                     // Redraw output when task finished
                     $this->output->printToOutput($output, $this->data, microtime(true) - $start);
-                    $this->printTaskStatsToFile($doneStackedTask);
+                    $this->logDoneStackedTask($doneStackedTask);
                 }
             }
 
@@ -256,6 +269,7 @@ class Parallel
             }
         }
 
+        $this->globalTaskLogger->processGlobal();
         $this->output->printToOutput($output, $this->data, microtime(true) - $start);
         $this->output->finishMessage($output, $this->data, microtime(true) - $start);
     }
@@ -293,15 +307,8 @@ class Parallel
     /**
      * @param StackedTask $stackedTask
      */
-    private function printTaskStatsToFile(StackedTask $stackedTask): void
+    private function logDoneStackedTask(StackedTask $stackedTask): void
     {
-        if (empty($this->logDir)) {
-            return;
-        }
-
-        $fileContent = @file_get_contents($this->logFile);
-        $data = $fileContent ? json_decode($fileContent, true) : [];
-
         $withTasks = [];
         if (count($stackedTask->getRunningWith())) {
             foreach ($stackedTask->getRunningWith() as $name => $value) {
@@ -315,18 +322,13 @@ class Parallel
         /** @var TaskData $taskData */
         $taskData = $this->data[$stackedTask->getTask()->getName()];
 
-        $data['tasks_count'] = count($this->data);
-        $data['finished'] = $this->taskStack->isEmpty();
-        $data['tasks'][$stackedTask->getTask()->getName()] = [
-            'start_at' => $stackedTask->getStartAt()->format('c'),
-            'end_at' =>  $stackedTask->getFinishedAt()->format('c'),
-            'duration' => $taskData->getDuration(),
-            'count' => $taskData->getCount(),
-            'memory_peak' => $taskData->getMemoryPeak(),
-            'extra' => $taskData->getAllExtra(),
-            'with_tasks' => $withTasks
-        ];
-
-        file_put_contents($this->logFile, json_encode($data));
+        $this->globalTaskLogger->processDoneTaskData(
+            $stackedTask->getTask()->getName(),
+            $stackedTask->getStartAt(),
+            $stackedTask->getFinishedAt(),
+            $taskData->getMemoryPeak(),
+            $withTasks,
+            $taskData->getAllExtra()
+        );
     }
 }

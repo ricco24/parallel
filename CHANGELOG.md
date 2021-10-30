@@ -2,6 +2,9 @@
 
 ## [Unreleased][unreleased]
 
+#### Added
+- TaskLogger
+
 ## 2.0.0 - 2020-13-05
 ### Added
 - MaxConcurrentTaskCount option for StackedTask
