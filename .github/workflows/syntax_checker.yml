@@ -1,4 +1,4 @@
-name: PHPstan
+name: Syntax checker
 
 on:
   push:

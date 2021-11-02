@@ -1,4 +1,4 @@
-name: PHPstan
+name: Extensions finder
 
 on:
   push:
