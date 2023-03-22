@@ -225,7 +225,7 @@ class Parallel
                 }
 
                 $processes[] = $process = [
-                    'process' => new Process('php ' . $this->fileName . ' ' . $stackedTask->getTask()->getName(), $this->binDirPath, null, null, null),
+                    'process' => new Process(['php', $this->fileName, $stackedTask->getTask()->getName()], $this->binDirPath, null, null, null),
                     'stackedTask' => $stackedTask
                 ];
 
