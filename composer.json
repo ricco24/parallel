@@ -13,7 +13,7 @@
         "php": ">=7.1",
         "ext-json": "*",
         "symfony/console": "^4.3|^5.0",
-        "symfony/process": "^4.3",
+        "symfony/process": "^4.3|^5.0",
         "psr/log": "^1.1"
     },
     "require-dev": {

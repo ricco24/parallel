@@ -65,7 +65,7 @@ class TableOutput implements Output
      */
     private function clearScreen(OutputInterface $output): void
     {
-        $process = new Process('clear');
+        $process = new Process(['clear']);
         $process->run();
         $output->writeln($process->getOutput());
     }
