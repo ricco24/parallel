@@ -26,6 +26,8 @@ class Parallel
 {
     use LoggerAwareTrait;
 
+    private const MICROSECONDS_IN_SECOND = 1000000;
+
     /** @var string */
     private $binDirPath;
 
@@ -59,16 +61,25 @@ class Parallel
     /** @var TaskLogger */
     private $globalTaskLogger;
 
+    /** @var float */
+    private $sleep;
+
     /**
-     * @param string $binDirPath    Path to directory with parallel binary
-     * @param string $fileName      Parallel binary filename
-     * @param int $concurrent       Max count of concurrent tasks
+     * @param string $binDirPath      Path to directory with parallel binary
+     * @param string $fileName        Parallel binary filename
+     * @param int $concurrent         Max count of concurrent tasks
+     * @param float $secondsSleep     Sleep time between tasks
      */
-    public function __construct(string $binDirPath, string $fileName, int $concurrent = 3)
-    {
+    public function __construct(
+        string $binDirPath,
+        string $fileName,
+        int $concurrent = 3,
+        float $secondsSleep = 1.0
+    ) {
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
         $this->concurrent = $concurrent;
+        $this->sleep = $secondsSleep;
         $this->logger = new NullLogger();
         $this->taskLoggerFactory = new NullTaskLoggerFactory();
         $this->app = new Application();
@@ -136,6 +147,12 @@ class Parallel
             'maxConcurrentTasksCount' => $maxConcurrentTasksCount
         ];
         $this->app->add($task);
+        return $this;
+    }
+
+    public function setSleep(float $seconds): Parallel
+    {
+        $this->sleep = $seconds;
         return $this;
     }
 
@@ -212,7 +229,7 @@ class Parallel
             }
 
             if (count($processes) >= $this->concurrent) {
-                sleep(1);
+                usleep(floor($this->sleep * self::MICROSECONDS_IN_SECOND));
                 continue;
             }
 
@@ -265,7 +282,7 @@ class Parallel
                     $this->buildTaskData($stackedTask, $data);
                     $this->output->printToOutput($output, $this->data, microtime(true) - $start);
                 });
-                sleep(1);
+                usleep(floor($this->sleep * self::MICROSECONDS_IN_SECOND));
             }
         }
 

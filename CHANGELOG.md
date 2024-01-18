@@ -1,6 +1,12 @@
 # Change log
 
 ## [Unreleased][unreleased]
+### Added
+- Configurable sleeping time
+- Count of visible rows in output table
+
+### Fixed
+- PHP Deprecated: Implicit conversion from float to int loses precision
 
 ## 2.2.0 - 2021-11-02
 ### Changed
