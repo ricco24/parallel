@@ -1,6 +1,8 @@
 # Change log
 
 ## [Unreleased][unreleased]
+#### Added
+- Added end process when item counts is zero
 
 ## 2.2.0 - 2021-11-02
 ### Changed

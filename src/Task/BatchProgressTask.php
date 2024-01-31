@@ -2,13 +2,13 @@
 
 namespace Parallel\Task;
 
+use Parallel\Task as BaseTask;
 use Parallel\TaskResult\ErrorResult;
 use Parallel\TaskResult\SkipResult;
 use Parallel\TaskResult\SuccessResult;
 use Parallel\TaskResult\TaskResult;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Parallel\Task as BaseTask;
 use Throwable;
 
 abstract class BatchProgressTask extends BaseTask
@@ -46,6 +46,9 @@ abstract class BatchProgressTask extends BaseTask
 
         try {
             $this->itemsCount = $this->itemsCount();
+            if ($this->itemsCount === 0) {
+                return new SuccessResult();
+            }
             $this->sendNotify();
         } catch (Throwable $e) {
             $this->error = 1;
@@ -84,7 +87,7 @@ abstract class BatchProgressTask extends BaseTask
                 $this->success += count($itemsToProcess);
             } catch (Throwable $e) {
                 $this->logger->error($e->getMessage(), array_merge($this->getLogContext(), [
-                    'exception' => $e
+                    'exception' => $e,
                 ]));
                 $this->error += count($itemsToProcess);
             }
@@ -117,9 +120,6 @@ abstract class BatchProgressTask extends BaseTask
         return new SuccessResult();
     }
 
-    /**
-     * @param TaskResult $taskResult
-     */
     private function processResult(TaskResult $taskResult): void
     {
         if ($taskResult instanceof SuccessResult) {
@@ -141,7 +141,7 @@ abstract class BatchProgressTask extends BaseTask
             'success' => $this->success,
             'skip' => $this->skip,
             'error' => $this->error,
-            'message' => ''
+            'message' => '',
         ], $data));
     }
 
