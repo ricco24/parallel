@@ -18,7 +18,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 
 // First setup Parallel class
 // If you setup log dir (optional) parallel will automatically create sub folder /stats and log running statistics in json format here.
-$parallel = new \Parallel\Parallel(__DIR__, 'parallel', 5, __DIR__ . '/../log');
+$parallel = new \Parallel\Parallel(__DIR__, 'parallel', 5, 0.1);
 
 // Add some tasks (only examples, not part of parallel)
 // Task is defined by its name and by dependencies (optional)

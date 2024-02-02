@@ -5,13 +5,14 @@ namespace Parallel\Helper;
 class TimeHelper
 {
     /**
-     * @param int $seconds
+     * @param float|int $seconds
      * @return string
      */
-    public static function formatTime(int $seconds): string
+    public static function formatTime($seconds): string
     {
         $hours = 0;
         $minutes = 0;
+        $seconds = floor($seconds);
 
         if ($seconds > 3600) {
             $hours = floor($seconds / 3600);

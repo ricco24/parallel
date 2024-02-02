@@ -8,13 +8,21 @@ use Parallel\TaskData;
 use Parallel\TaskStack\StackedTask;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Helper\Table as TableHelper;
 use Symfony\Component\Console\Helper\TableSeparator;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Console\Helper\Table as TableHelper;
 use Symfony\Component\Process\Process;
 
 class TableOutput implements Output
 {
+    /** @var int|null */
+    private $doneTasksRows;
+
+    public function __construct(?int $doneTasksRows = null)
+    {
+        $this->doneTasksRows = $doneTasksRows;
+    }
+
     /**
      * @param OutputInterface $output
      */
@@ -218,24 +226,30 @@ class TableOutput implements Output
      */
     private function renderDoneTasks(Table $table, array $rows, int $avgMemoryUsage, array &$total): void
     {
+        $count = count($rows);
+        $doneTasks = 0;
+
         foreach ($rows as $rowTitle => $row) {
             $rowMessage = $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : '';
             if ($row->getExtra('error', 0) && $row->getExtra('message', '')) {
                 $rowMessage .= ". " . $row->getExtra('message', '');
             }
 
-            $table->addRow([
-                $this->formatTitle($rowTitle, $row),
-                number_format($row->getCount()),
-                number_format($row->getExtra('success', 0)),
-                number_format($row->getExtra('skip', 0)),
-                number_format($row->getExtra('error', 0)),
-                number_format($row->getCodeErrorsCount()),
-                $this->progress($row->getProgress()),
-                TimeHelper::formatTime($row->getDuration()),
-                $this->formatMemory($row, $avgMemoryUsage),
-                $rowMessage
-            ]);
+            $isVisibleRow = $this->doneTasksRows === null || ($this->doneTasksRows > 0 && ($count - $doneTasks <= $this->doneTasksRows));
+            if ($row->getExtra('error', 0) || $isVisibleRow) {
+                $table->addRow([
+                    $this->formatTitle($rowTitle, $row),
+                    number_format($row->getCount()),
+                    number_format($row->getExtra('success', 0)),
+                    number_format($row->getExtra('skip', 0)),
+                    number_format($row->getExtra('error', 0)),
+                    number_format($row->getCodeErrorsCount()),
+                    $this->progress($row->getProgress()),
+                    TimeHelper::formatTime($row->getDuration()),
+                    $this->formatMemory($row, $avgMemoryUsage),
+                    $rowMessage
+                ]);
+            }
 
             $total['count'] += $row->getCount();
             $total['success'] += $row->getExtra('success', 0);
@@ -243,9 +257,11 @@ class TableOutput implements Output
             $total['error'] += $row->getExtra('error', 0);
             $total['code_errors'] += $row->getCodeErrorsCount();
             $total['duration'] += $row->getDuration();
+
+            $doneTasks++;
         }
 
-        if (count($rows)) {
+        if ($count) {
             $table->addRow(new TableSeparator());
         }
     }
@@ -343,6 +359,6 @@ class TableOutput implements Output
             return 0;
         }
 
-        return (int) $memory/$count;
+        return floor($memory / $count);
     }
 }
