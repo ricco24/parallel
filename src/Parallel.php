@@ -165,11 +165,11 @@ class Parallel
         }
         for ($i = 1; $i <= $count; $i++) {
             $taskName = $task->getName();
-            $task = (clone $task)
+            $newTask = (clone $task)
                 ->setName(strpos($taskName, '%d') === false ? "$taskName:$i" : sprintf($taskName, $i))
                 ->setTaskNumber($i)
                 ->setTaskCount($count);
-            $this->addTask($task, $runAfter);
+            $this->addTask($newTask, $runAfter);
         }
         return $this;
     }
