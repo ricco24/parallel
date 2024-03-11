@@ -10,6 +10,7 @@ use Parallel\Logging\TaskLogger\TaskLogger;
 use Parallel\Logging\TaskLogger\TaskLoggerFactory;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
+use Parallel\Task\MultipleTask;
 use Parallel\TaskStack\StackedTask;
 use Parallel\TaskStack\TaskStack;
 use Parallel\TaskStack\TaskStackFactory;
@@ -147,6 +148,29 @@ class Parallel
             'maxConcurrentTasksCount' => $maxConcurrentTasksCount
         ];
         $this->app->add($task);
+        return $this;
+    }
+
+    /**
+     * @param int $count
+     * @param Task&MultipleTask $task
+     * @param array $runAfter
+     * @return $this
+     * @throws Exception
+     */
+    public function addMultiTask(int $count, Task $task, array $runAfter = []): Parallel
+    {
+        if (!is_subclass_of($task, MultipleTask::class)) {
+            throw new \Exception(get_class($task) . ' must implement ' . MultipleTask::class . ' interface.');
+        }
+        for ($i = 1; $i <= $count; $i++) {
+            $taskName = $task->getName();
+            $task = (clone $task)
+                ->setName(strpos($taskName, '%d') === false ? "$taskName:$i" : sprintf($taskName, $i))
+                ->setTaskNumber($i)
+                ->setTaskCount($count);
+            $this->addTask($task, $runAfter);
+        }
         return $this;
     }
 
