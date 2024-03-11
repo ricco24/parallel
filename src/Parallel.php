@@ -65,6 +65,9 @@ class Parallel
     /** @var float */
     private $sleep;
 
+    /** @var array  */
+    private $multipleTasks = [];
+
     /**
      * @param string $binDirPath      Path to directory with parallel binary
      * @param string $fileName        Parallel binary filename
@@ -144,7 +147,15 @@ class Parallel
         $task->setTaskLoggerFactory($this->taskLoggerFactory);
         $this->tasksData[] = [
             'task' => $task,
-            'runAfter' => $runAfter,
+            'runAfter' => function() use ($runAfter): array {
+                foreach ($this->multipleTasks as $name => $tasks) {
+                    $offset = array_search($name, $runAfter, true);
+                    if ($offset !== false) {
+                        array_splice($runAfter, (int)$offset, 1, $tasks);
+                    }
+                }
+                return $runAfter;
+            },
             'maxConcurrentTasksCount' => $maxConcurrentTasksCount
         ];
         $this->app->add($task);
@@ -160,16 +171,20 @@ class Parallel
      */
     public function addMultiTask(int $count, Task $task, array $runAfter = []): Parallel
     {
-        if (!is_subclass_of($task, MultipleTask::class)) {
+        if (!$task instanceof MultipleTask) {
             throw new \Exception(get_class($task) . ' must implement ' . MultipleTask::class . ' interface.');
         }
+        $taskName = $task->getName();
         for ($i = 1; $i <= $count; $i++) {
-            $taskName = $task->getName();
             $newTask = (clone $task)
                 ->setName(strpos($taskName, '%d') === false ? "$taskName:$i" : sprintf($taskName, $i))
                 ->setTaskNumber($i)
                 ->setTaskCount($count);
             $this->addTask($newTask, $runAfter);
+            if (!isset($this->multipleTasks[$taskName])) {
+                $this->multipleTasks[$taskName] = [];
+            }
+            $this->multipleTasks[$taskName][] = $newTask->getName();
         }
         return $this;
     }

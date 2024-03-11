@@ -19,7 +19,7 @@ class TaskStackFactory
 
         // Check dependencies task names
         foreach ($tasksData as $taskData) {
-            foreach ($taskData['runAfter'] as $runAfterTask) {
+            foreach ($taskData['runAfter']() as $runAfterTask) {
                 if (!array_key_exists($runAfterTask, $taskNames)) {
                     throw new TaskStackFactoryException(sprintf("Task with name \"%s\" required by \"%s\" does not exist", $runAfterTask, $taskData['task']->getName()));
                 }
@@ -29,7 +29,7 @@ class TaskStackFactory
         // Nothing needs to be filtered
         if (empty($subnets)) {
             foreach ($tasksData as $taskData) {
-                $taskStack->addTask($taskData['task'], $taskData['runAfter'], $taskData['maxConcurrentTasksCount']);
+                $taskStack->addTask($taskData['task'], $taskData['runAfter'](), $taskData['maxConcurrentTasksCount']);
             }
             return $taskStack;
         }
@@ -41,7 +41,7 @@ class TaskStackFactory
             }
 
             $runAfter = [];
-            foreach ($taskData['runAfter'] as $runAfterTask) {
+            foreach ($taskData['runAfter']() as $runAfterTask) {
                 if ($this->matchSomeSubnet($subnets, $runAfterTask)) {
                     $runAfter[] = $runAfterTask;
                 }
