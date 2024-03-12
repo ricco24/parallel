@@ -4,9 +4,16 @@ namespace Parallel\Task;
 
 interface MultipleTask
 {
+    /**
+     * @param string $name
+     * @return self
+     */
     public function setName(string $name);
 
-    public function getName(): string;
+    /**
+     * @return string
+     */
+    public function getName();
 
     public function setTaskNumber(int $number): self;
 
