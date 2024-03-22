@@ -163,29 +163,37 @@ class Parallel
     }
 
     /**
-     * @param int $count
+     * @param array|int $tasks  - count of tasks or array of identifiers
      * @param Task&MultipleTask $task
      * @param array $runAfter
      * @return $this
      * @throws Exception
      */
-    public function addMultiTask(int $count, Task $task, array $runAfter = []): Parallel
+    public function addMultiTask($tasks, Task $task, array $runAfter = []): Parallel
     {
         if (!$task instanceof MultipleTask) {
             throw new \Exception(get_class($task) . ' must implement ' . MultipleTask::class . ' interface.');
         }
+
         $taskName = $task->getName();
-        for ($i = 1; $i <= $count; $i++) {
+        if (is_numeric($tasks)) {
+            $tasks = range(1, $tasks);
+        }
+        $count = count($tasks);
+
+        foreach ($tasks as $taskId) {
+            $newTaskName = strpos($taskName, '%') === false ? "$taskName:$taskId" : str_replace('%', $taskId, $taskName);
             $newTask = (clone $task)
-                ->setName(strpos($taskName, '%d') === false ? "$taskName:$i" : sprintf($taskName, $i))
-                ->setTaskNumber($i)
+                ->setName($newTaskName)
+                ->setTaskIdentifier($taskId)
                 ->setTaskCount($count);
             $this->addTask($newTask, $runAfter);
             if (!isset($this->multipleTasks[$taskName])) {
-                $this->multipleTasks[$taskName] = [];
+                $this->multipleTasks[$taskName] = []; // $this->multipleTasks[$taskName] ??= [];
             }
             $this->multipleTasks[$taskName][] = $newTask->getName();
         }
+
         return $this;
     }
 

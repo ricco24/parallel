@@ -15,7 +15,11 @@ interface MultipleTask
      */
     public function getName();
 
-    public function setTaskNumber(int $number): self;
+    /**
+     * @param int|string $identifier
+     * @return self
+     */
+    public function setTaskIdentifier($identifier): self;
 
     public function setTaskCount(int $count): self;
 }
