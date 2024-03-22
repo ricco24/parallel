@@ -32,6 +32,16 @@ $parallel->addTask(new \Parallel\CategoriesTask('task:categories'));
 // If we setup 0, this task will be run alone although we setup 5 as global max concurrent
 $parallel->addTask(new \Parallel\ArticleCategoriesTask('task:articlesCategories'), 0);
 
+// You can add Multiple tasks (one task which can be run parallel with different options/identifier)
+//   You can use "%" in task name as placeholder for identifier. eg. "task:users-%:save". If placeholder missing identifier will be append as ":%" to end of task name (suffix). 
+//   Task is defined by a) count or b) array of ids and its name, optional you can add dependencies
+//   Multiple task must implementing MultipleTask interface.
+// Dependencies ($runAfter = []) are tasks which have to be done before task can start.
+//   Original task name will be automatically expanded to all multiple tasks names.
+$parallel->addMultiTask(10, new \Parallel\UsersTask('task:user')); // add ['task:user:1', 'task:user:2'...'task:user:10']
+$parallel->addTask(new \Parallel\UsersTask('task:user-after'), ['task:user']); // task 'task:user-after' will be running after  ['task:user:1', 'task:user:2'...'task:user:10']
+$parallel->addMultiTask(['thumbs', 'logos'], new \Parallel\ImagesTask('task:images-%')); // add ['task:images-thumbs', 'task:images-logos'], new ImagesTask('task:images-thumbs', ...) will be called with ->setTaskIdentifier('thumbs') and ->setTaskCount(2)
+
 // Run symfony application under hood
 $parallel->runConsoleApp();
 

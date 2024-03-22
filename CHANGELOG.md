@@ -4,6 +4,7 @@
 ### Added
 - Configurable sleeping time
 - Count of visible rows in output table
+- Multiple tasks (same task added multiple times with different name)
 
 ### Fixed
 - PHP Deprecated: Implicit conversion from float to int loses precision

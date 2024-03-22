@@ -10,6 +10,7 @@ use Parallel\Logging\TaskLogger\TaskLogger;
 use Parallel\Logging\TaskLogger\TaskLoggerFactory;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
+use Parallel\Task\MultipleTask;
 use Parallel\TaskStack\StackedTask;
 use Parallel\TaskStack\TaskStack;
 use Parallel\TaskStack\TaskStackFactory;
@@ -63,6 +64,9 @@ class Parallel
 
     /** @var float */
     private $sleep;
+
+    /** @var array  */
+    private $multipleTasks = [];
 
     /**
      * @param string $binDirPath      Path to directory with parallel binary
@@ -143,10 +147,53 @@ class Parallel
         $task->setTaskLoggerFactory($this->taskLoggerFactory);
         $this->tasksData[] = [
             'task' => $task,
-            'runAfter' => $runAfter,
+            'runAfter' => function() use ($runAfter): array {
+                foreach ($this->multipleTasks as $name => $tasks) {
+                    $offset = array_search($name, $runAfter, true);
+                    if ($offset !== false) {
+                        array_splice($runAfter, (int)$offset, 1, $tasks);
+                    }
+                }
+                return $runAfter;
+            },
             'maxConcurrentTasksCount' => $maxConcurrentTasksCount
         ];
         $this->app->add($task);
+        return $this;
+    }
+
+    /**
+     * @param array|int $tasks  - count of tasks or array of identifiers
+     * @param Task&MultipleTask $task
+     * @param array $runAfter
+     * @return $this
+     * @throws Exception
+     */
+    public function addMultiTask($tasks, Task $task, array $runAfter = []): Parallel
+    {
+        if (!$task instanceof MultipleTask) {
+            throw new \Exception(get_class($task) . ' must implement ' . MultipleTask::class . ' interface.');
+        }
+
+        $taskName = $task->getName();
+        if (is_numeric($tasks)) {
+            $tasks = range(1, $tasks);
+        }
+        $count = count($tasks);
+
+        foreach ($tasks as $taskId) {
+            $newTaskName = strpos($taskName, '%') === false ? "$taskName:$taskId" : str_replace('%', $taskId, $taskName);
+            $newTask = (clone $task)
+                ->setName($newTaskName)
+                ->setTaskIdentifier($taskId)
+                ->setTaskCount($count);
+            $this->addTask($newTask, $runAfter);
+            if (!isset($this->multipleTasks[$taskName])) {
+                $this->multipleTasks[$taskName] = []; // $this->multipleTasks[$taskName] ??= [];
+            }
+            $this->multipleTasks[$taskName][] = $newTask->getName();
+        }
+
         return $this;
     }
 
