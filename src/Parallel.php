@@ -10,6 +10,7 @@ use Parallel\Logging\TaskLogger\TaskLogger;
 use Parallel\Logging\TaskLogger\TaskLoggerFactory;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
+use Parallel\TaskGenerator\TaskGenerator;
 use Parallel\TaskStack\StackedTask;
 use Parallel\TaskStack\TaskStack;
 use Parallel\TaskStack\TaskStackFactory;
@@ -63,6 +64,9 @@ class Parallel
 
     /** @var float */
     private $sleep;
+
+    /** @var TaskGenerator[] */
+    private $taskGenerators = [];
 
     /**
      * @param string $binDirPath      Path to directory with parallel binary
@@ -137,7 +141,7 @@ class Parallel
      * @param int|null $maxConcurrentTasksCount
      * @return Parallel
      */
-    public function addTask(Task $task, $runAfter = [], ?int $maxConcurrentTasksCount = null): Parallel
+    public function addTask(Task $task, array $runAfter = [], ?int $maxConcurrentTasksCount = null): Parallel
     {
         $task->setLogger($this->logger);
         $task->setTaskLoggerFactory($this->taskLoggerFactory);
@@ -147,6 +151,12 @@ class Parallel
             'maxConcurrentTasksCount' => $maxConcurrentTasksCount
         ];
         $this->app->add($task);
+        return $this;
+    }
+
+    public function addTaskGenerator(TaskGenerator $taskGenerator): Parallel
+    {
+        $this->taskGenerators[$taskGenerator->getName()] = $taskGenerator;
         return $this;
     }
 
@@ -173,6 +183,26 @@ class Parallel
     {
         if ($this->taskStack !== null) {
             return;
+        }
+
+        $generatorsTasks = [];
+        foreach ($this->taskGenerators as $taskGenerator) {
+            foreach ($taskGenerator->generateTasks() as $generatedTask) {
+                $generatorsTasks[$taskGenerator->getName()][] = $generatedTask->getTask()->getName();
+                $this->addTask($generatedTask->getTask(), $generatedTask->getRunAfter(), $generatedTask->getMaxConcurrentTasksCount());
+            }
+        }
+
+        // Fix runAfter in tasksData - substitute generator names with all generator generated tasks
+        foreach ($this->tasksData as $key => $taskData) {
+            $runAfterFinal = $taskData['runAfter'];
+            foreach ($taskData['runAfter'] as $runAfterKey => $runAfterTask) {
+                if (isset($generatorsTasks[$runAfterTask])) {
+                    unset($runAfterFinal[$runAfterKey]);
+                    $runAfterFinal = array_merge($runAfterFinal, $generatorsTasks[$runAfterTask]);
+                }
+                $this->tasksData[$key]['runAfter'] = $runAfterFinal;
+            }
         }
 
         $this->taskStack = $this->taskStackFactory->create($this->tasksData, $subnets);
