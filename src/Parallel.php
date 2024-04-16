@@ -66,7 +66,7 @@ class Parallel
     /** @var float */
     private $sleep;
 
-    /** @var array<string, GeneratedTask[]> */
+    /** @var array<string, string[]> */
     private $generatedTasks = [];
 
     /**
@@ -191,14 +191,15 @@ class Parallel
 
         // Fix runAfter in tasksData - substitute generator names with all generator generated tasks
         foreach ($this->tasksData as $key => $taskData) {
-            $runAfterFinal = $taskData['runAfter'];
-            foreach ($taskData['runAfter'] as $runAfterKey => $runAfterTask) {
+            $runAfterFinal = [];
+            foreach ($taskData['runAfter'] as $runAfterTask) {
                 if (isset($this->generatedTasks[$runAfterTask])) {
-                    unset($runAfterFinal[$runAfterKey]);
                     $runAfterFinal = array_merge($runAfterFinal, $this->generatedTasks[$runAfterTask]);
+                    continue;
                 }
-                $this->tasksData[$key]['runAfter'] = $runAfterFinal;
+                $runAfterFinal[] = $runAfterTask;
             }
+            $this->tasksData[$key]['runAfter'] = $runAfterFinal;
         }
 
         $this->taskStack = $this->taskStackFactory->create($this->tasksData, $subnets);
