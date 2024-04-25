@@ -274,8 +274,8 @@ class TableOutput implements Output
             str_repeat($chars[8], $fullBlocks) .
             ($partialBlock > 0 ? $chars[round($partialBlock * 8)] : '') .
             '</>' .
-            str_repeat('·', self::PROGRESS_WIDTH - $fullBlocks - ($partialBlock > 0 ? 1 : 0)) .
-            str_pad($this->numf($percent), 5, ' ', STR_PAD_LEFT) . '%';
+            str_repeat(' ', self::PROGRESS_WIDTH - $fullBlocks - ($partialBlock > 0 ? 1 : 0)) .
+            '<fg=gray>▏</>'.str_pad($this->numf($percent), 4, ' ', STR_PAD_LEFT) . '%';
     }
 
     private function numf(float $num): string
