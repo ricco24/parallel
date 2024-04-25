@@ -10,7 +10,7 @@
         }
     ],
     "require": {
-        "php": ">=7.1",
+        "php": ">=7.4",
         "ext-json": "*",
         "symfony/console": "^4.3|^5.0",
         "symfony/process": "^4.3|^5.0",
