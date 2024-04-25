@@ -22,7 +22,9 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class TableOutput implements Output
 {
     private const PROGRESS_WIDTH = 16;
+    private const DEFAULT_HEIGHT = 20;
 
+    private int $minHeight;
     private float $lastOverwrite = 0;
 
     private OutputInterface $output;
@@ -37,9 +39,9 @@ class TableOutput implements Output
 
     private TableHelper $mainTable;
 
-    public function __construct(?int $doneTasksRows = null)
+    public function __construct(?int $minHeight = null)
     {
-        $this->doneTasksRows = $doneTasksRows;
+        $this->minHeight = max(self::DEFAULT_HEIGHT, $minHeight ?? 0);
     }
 
     public function setOutput(OutputInterface $output): void
@@ -154,6 +156,8 @@ class TableOutput implements Output
     {
         $table = $this->mainTable;
         $table->setRows([]);
+        $taskWidth = max(array_map('strlen', array_keys($all))) + 2;
+        $table->setColumnWidth(0, $taskWidth);
 
         $total = [
             'count' => 0,
@@ -260,6 +264,9 @@ class TableOutput implements Output
 
         if ($errorRows !== []) {
             $table->addRows($errorRows);
+        }
+        for ($i = count($rows); $i < $this->minHeight; $i++) {
+            $table->addRow(['', '', '', '', '', '', '', '', '']);
         }
     }
 
