@@ -46,7 +46,7 @@ class AnalyzeGraphCommand extends Command
      * @param OutputInterface $output
      * @return int
      */
-    protected function execute(InputInterface $input, OutputInterface $output): ?int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if (!$this->analyzeDirectory) {
             $output->writeln('<error>Analyze directory is not set</error>');

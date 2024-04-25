@@ -182,14 +182,14 @@ class Parallel
      * @param InputInterface $input
      * @param OutputInterface $output
      */
-    public function execute(InputInterface $input, OutputInterface $output): void
+    public function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->output->setOutput($output);
         try {
             $this->initializeTaskStack($input->getOption('subnet'));
         } catch (TaskStackFactoryException $e) {
             $this->output->errorMessage($e->getMessage());
-            return;
+            return 1;
         }
 
         $this->globalTaskLogger = $this->taskLoggerFactory->create('global');
@@ -290,6 +290,8 @@ class Parallel
         $this->globalTaskLogger->processGlobal();
         $this->output->printToOutput($this->data, microtime(true) - $start);
         $this->output->finishMessage($this->data, microtime(true) - $start);
+
+        return 0;
     }
 
     /**
