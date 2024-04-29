@@ -227,7 +227,7 @@ class TableOutput implements Output
         foreach ($rows as $rowTitle => $row) {
             $time = TimeHelper::formatTime($row->getDuration());
             if (!$running) {
-                $time = str_pad($time, 3, ' ', STR_PAD_LEFT);
+                $time = str_pad($time, 5, ' ', STR_PAD_LEFT);
                 $time .= ' │ ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s');
             }
 
@@ -277,12 +277,12 @@ class TableOutput implements Output
         $partialBlock = fmod($percent / 100 * self::PROGRESS_WIDTH, 1);
 
         $chars = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
-        return '<fg=green>' .
+        return '<fg=green;bg=gray>' .
             str_repeat($chars[8], $fullBlocks) .
             ($partialBlock > 0 ? $chars[round($partialBlock * 8)] : '') .
-            '</>' .
             str_repeat(' ', self::PROGRESS_WIDTH - $fullBlocks - ($partialBlock > 0 ? 1 : 0)) .
-            '<fg=gray>▏</>'.str_pad($this->numf($percent), 4, ' ', STR_PAD_LEFT) . '%';
+            '</>' .
+            str_pad($this->numf($percent), 5, ' ', STR_PAD_LEFT) . '%';
     }
 
     private function numf(float $num): string
