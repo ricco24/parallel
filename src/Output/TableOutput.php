@@ -174,6 +174,11 @@ class TableOutput implements Output
         if (count($done) === count($all)) {
             $this->renderTasks($table, $done, $avgMemoryUsage, $total, false);
         } else {
+            $cutDoneCount = $this->minHeight - count($running);
+            if ($cutDoneCount > 0) {
+                $cutDone = array_slice($done, -$cutDoneCount, null, true);
+                $this->renderTasks($table, $cutDone, $avgMemoryUsage, $total, true);
+            }
             $this->renderTasks($table, $running, $avgMemoryUsage, $total, true);
         }
 
@@ -243,7 +248,7 @@ class TableOutput implements Output
                 $this->formatMemory($row, $avgMemoryUsage, !$running),
             ];
 
-            if ($row->getExtra('error', 0) && $row->getExtra('message', '')) {
+            if (!$running && $row->getExtra('error', 0) && $row->getExtra('message', '')) {
                 $rowMessage = $row->getExtra('message', '');
                 $errorRows[] = new TableSeparator();
                 $errorRows[] = $tRow;
@@ -264,9 +269,6 @@ class TableOutput implements Output
 
         if ($errorRows !== []) {
             $table->addRows($errorRows);
-        }
-        for ($i = count($rows); $i < $this->minHeight; $i++) {
-            $table->addRow(['', '', '', '', '', '', '', '', '']);
         }
     }
 
