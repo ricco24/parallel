@@ -1,6 +1,7 @@
 # Change log
 
 ## [Unreleased][unreleased]
+## 2.3.0 - 2024-05-14
 ### Added
 - Configurable sleeping time
 - Count of visible rows in output table
@@ -41,7 +42,8 @@
 ## 1.0.0 - 2016-06-06
 - First tagged version
 
-[unreleased]: https://github.com/ricco24/parallel/compare/2.2.0...HEAD
+[unreleased]: https://github.com/ricco24/parallel/compare/2.3.0...HEAD
+[2.3.0]: https://github.com/ricco24/parallel/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/ricco24/parallel/compare/2.1.0...2.2.0
 [2.1.0]: https://github.com/ricco24/parallel/compare/2.0.0...2.1.0
 [2.0.0]: https://github.com/ricco24/parallel/compare/1.0.0...2.0.0
