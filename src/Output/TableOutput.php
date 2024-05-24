@@ -175,6 +175,9 @@ class TableOutput implements Output
             $this->renderTasks($table, $done, $avgMemoryUsage, $total, false);
         } else {
             $cutDoneCount = $this->minHeight - count($running);
+            for ($i = $cutDoneCount; $i < count($running); $i++) {
+                $table->addRow(['', '', '', '', '', '', '', '', '']);
+            }
             if ($cutDoneCount > 0) {
                 $cutDone = array_slice($done, -$cutDoneCount, null, true);
                 $this->renderTasks($table, $cutDone, $avgMemoryUsage, $total, true);
@@ -258,7 +261,7 @@ class TableOutput implements Output
             }
 
             $total['count'] += $row->getCount();
-            $total['progress'] += $row->getProgress() / 100;
+            $total['progress'] += min(1, $row->getProgress() / 100);
             $total['success'] += $row->getExtra('success', 0);
             $total['skip'] += $row->getExtra('skip', 0);
             $total['error'] += $row->getExtra('error', 0);
