@@ -186,7 +186,7 @@ class TableOutput implements Output
         $cDone = count($done) + $total['progress'];
         $table->addRow([
             'Total',
-            $this->progress(100 * $cDone / count($all)),
+            $this->progress(100 * count($done) / count($all)),
             $this->numCell(count($done)),
             $this->numCell(count($all), 'left'),
             $this->numCell($total['skip']),
