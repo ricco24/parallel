@@ -175,9 +175,6 @@ class TableOutput implements Output
             $this->renderTasks($table, $done, $avgMemoryUsage, $total, false);
         } else {
             $cutDoneCount = $this->minHeight - count($running);
-            for ($i = $cutDoneCount; $i < count($running); $i++) {
-                $table->addRow(['', '', '', '', '', '', '', '', '']);
-            }
             if ($cutDoneCount > 0) {
                 $cutDone = array_slice($done, -$cutDoneCount, null, true);
                 $this->renderTasks($table, $cutDone, $avgMemoryUsage, $total, true);
