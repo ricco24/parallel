@@ -1,6 +1,9 @@
 # Change log
 
 ## [Unreleased][unreleased]
+### Added 
+- Add error logging to ProgressTask and BatchProgressTask
+
 ## 2.3.0 - 2024-05-14
 ### Added
 - Configurable sleeping time
