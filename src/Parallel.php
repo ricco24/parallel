@@ -10,6 +10,8 @@ use Parallel\Logging\TaskLogger\TaskLogger;
 use Parallel\Logging\TaskLogger\TaskLoggerFactory;
 use Parallel\Output\Output;
 use Parallel\Output\TableOutput;
+use Parallel\TaskGenerator\GeneratedTask;
+use Parallel\TaskGenerator\TaskGenerator;
 use Parallel\TaskStack\StackedTask;
 use Parallel\TaskStack\TaskStack;
 use Parallel\TaskStack\TaskStackFactory;
@@ -63,6 +65,9 @@ class Parallel
 
     /** @var float */
     private $sleep;
+
+    /** @var array<string, string[]> */
+    private $generatedTasks = [];
 
     /**
      * @param string $binDirPath      Path to directory with parallel binary
@@ -137,7 +142,7 @@ class Parallel
      * @param int|null $maxConcurrentTasksCount
      * @return Parallel
      */
-    public function addTask(Task $task, $runAfter = [], ?int $maxConcurrentTasksCount = null): Parallel
+    public function addTask(Task $task, array $runAfter = [], ?int $maxConcurrentTasksCount = null): Parallel
     {
         $task->setLogger($this->logger);
         $task->setTaskLoggerFactory($this->taskLoggerFactory);
@@ -147,6 +152,15 @@ class Parallel
             'maxConcurrentTasksCount' => $maxConcurrentTasksCount
         ];
         $this->app->add($task);
+        return $this;
+    }
+
+    public function addTaskGenerator(TaskGenerator $taskGenerator): Parallel
+    {
+        foreach ($taskGenerator->generateTasks() as $generatedTask) {
+            $this->generatedTasks[$taskGenerator->getName()][] = $generatedTask->getTask()->getName();
+            $this->addTask($generatedTask->getTask(), $generatedTask->getRunAfter(), $generatedTask->getMaxConcurrentTasksCount());
+        }
         return $this;
     }
 
@@ -175,6 +189,19 @@ class Parallel
             return;
         }
 
+        // Fix runAfter in tasksData - substitute generator names with all generator generated tasks
+        foreach ($this->tasksData as $key => $taskData) {
+            $runAfterFinal = [];
+            foreach ($taskData['runAfter'] as $runAfterTask) {
+                if (isset($this->generatedTasks[$runAfterTask])) {
+                    $runAfterFinal = array_merge($runAfterFinal, $this->generatedTasks[$runAfterTask]);
+                    continue;
+                }
+                $runAfterFinal[] = $runAfterTask;
+            }
+            $this->tasksData[$key]['runAfter'] = $runAfterFinal;
+        }
+
         $this->taskStack = $this->taskStackFactory->create($this->tasksData, $subnets);
     }
 
@@ -182,20 +209,21 @@ class Parallel
      * @param InputInterface $input
      * @param OutputInterface $output
      */
-    public function execute(InputInterface $input, OutputInterface $output): void
+    public function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->output->setOutput($output);
         try {
             $this->initializeTaskStack($input->getOption('subnet'));
         } catch (TaskStackFactoryException $e) {
-            $this->output->errorMessage($output, $e->getMessage());
-            return;
+            $this->output->errorMessage($e->getMessage());
+            return 1;
         }
 
         $this->globalTaskLogger = $this->taskLoggerFactory->create('global');
         $this->globalTaskLogger->prepareGlobal(count($this->taskStack->getStackedTasks()), $input->getOption('subnet'));
 
         $start = microtime(true);
-        $this->output->startMessage($output);
+        $this->output->startMessage();
 
         // Add all tasks to tasks data array
         foreach ($this->taskStack->getStackedTasks() as $stashedTask) {
@@ -223,7 +251,7 @@ class Parallel
                     }
 
                     // Redraw output when task finished
-                    $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                    $this->output->printToOutput($this->data, microtime(true) - $start);
                     $this->logDoneStackedTask($doneStackedTask);
                 }
             }
@@ -259,7 +287,7 @@ class Parallel
                             $this->logger->error($stackedTask->getTask()->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine));
                         }
 
-                        $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                        $this->output->printToOutput($this->data, microtime(true) - $start);
                         return;
                     }
 
@@ -280,15 +308,17 @@ class Parallel
                     }
 
                     $this->buildTaskData($stackedTask, $data);
-                    $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                    $this->output->printToOutput($this->data, microtime(true) - $start);
                 });
                 usleep(floor($this->sleep * self::MICROSECONDS_IN_SECOND));
             }
         }
 
         $this->globalTaskLogger->processGlobal();
-        $this->output->printToOutput($output, $this->data, microtime(true) - $start);
-        $this->output->finishMessage($output, $this->data, microtime(true) - $start);
+        $this->output->printToOutput($this->data, microtime(true) - $start);
+        $this->output->finishMessage($this->data, microtime(true) - $start);
+
+        return 0;
     }
 
     /**

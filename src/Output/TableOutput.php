@@ -9,94 +9,123 @@ use Parallel\TaskStack\StackedTask;
 use Symfony\Component\Console\Formatter\OutputFormatterStyle;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Helper\Table as TableHelper;
+use Symfony\Component\Console\Helper\TableCell;
+use Symfony\Component\Console\Helper\TableCellStyle;
 use Symfony\Component\Console\Helper\TableSeparator;
+use Symfony\Component\Console\Input\StringInput;
+use Symfony\Component\Console\Output\BufferedOutput;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
+use Symfony\Component\Console\Output\ConsoleSectionOutput;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Process\Process;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 class TableOutput implements Output
 {
-    /** @var int|null */
-    private $doneTasksRows;
+    private const PROGRESS_WIDTH = 16;
+    private const DEFAULT_HEIGHT = 20;
 
-    public function __construct(?int $doneTasksRows = null)
+    private int $minHeight;
+    private float $lastOverwrite = 0;
+
+    private OutputInterface $output;
+
+    private BufferedOutput $buffer;
+
+    private SymfonyStyle $io;
+
+    private ?ConsoleSectionOutput $section = null;
+
+    private TableHelper $stackedTable;
+
+    private TableHelper $mainTable;
+
+    public function __construct(?int $minHeight = null)
     {
-        $this->doneTasksRows = $doneTasksRows;
+        $this->minHeight = max(self::DEFAULT_HEIGHT, $minHeight ?? 0);
     }
 
-    /**
-     * @param OutputInterface $output
-     */
-    public function startMessage(OutputInterface $output): void
-    {
-        $output->writeln("\nStarting parallel task processing ...\n");
-    }
-
-    /**
-     * @param OutputInterface $output
-     * @param string $error
-     */
-    public function errorMessage(OutputInterface $output, string $error): void
-    {
-        $output->writeln("\n<error>" . $error . "</error>\n");
-    }
-
-    /**
-     * @param OutputInterface $output
-     * @param array $data
-     * @param float $elapsedTime
-     */
-    public function printToOutput(OutputInterface $output, array $data, float $elapsedTime): void
+    public function setOutput(OutputInterface $output): void
     {
         $output->getFormatter()->setStyle('red', new OutputFormatterStyle('red'));
         $output->getFormatter()->setStyle('green', new OutputFormatterStyle('green'));
         $output->getFormatter()->setStyle('yellow', new OutputFormatterStyle('yellow'));
 
-        $this->clearScreen($output);
+        $this->output = $output;
+        $this->buffer = new BufferedOutput($output->getVerbosity(), $output->isDecorated(), $output->getFormatter());
+        $this->io = new SymfonyStyle(new StringInput(''), $output);
+        if ($output instanceof ConsoleOutputInterface) {
+            $this->section = $output->section();
+        }
 
-        list($stacked, $running, $done) = $this->filterTasks($data);
-        $this->renderStackedTable($output, $stacked, $running);
-        $this->renderMainTable($output, $data, $running, $done, $elapsedTime);
+        $this->mainTable = new TableHelper($this->buffer);
+        $this->mainTable->setStyle('box-double');
+        $this->mainTable->getStyle()->setCellHeaderFormat('<options=bold>%s</>');
+        $this->mainTable->setHeaders([
+            'Task',
+            'Progress',
+            '<fg=green;options=bold>OK</>',
+            'All',
+            '<yellow>Skip</>',
+            '<fg=red;options=bold>Err</>',
+            '<fg=yellow;options=bold>Wrn</>',
+            'Time',
+            'Memory',
+        ])->setColumnWidths([1, 1, 1, 1, 1, 1, 1]);
+
+        $this->stackedTable = new TableHelper($this->buffer);
+        $this->stackedTable
+            ->setHeaders(['Title', 'Waiting for']);
     }
 
-    /**
-     * @param OutputInterface $output
-     * @param array $data
-     * @param float $duration
-     */
-    public function finishMessage(OutputInterface $output, array $data, float $duration): void
+    public function startMessage(): void
     {
-        $output->writeln('');
     }
 
-    /**
-     * @param OutputInterface $output
-     */
-    private function clearScreen(OutputInterface $output): void
+    public function errorMessage(string $error): void
     {
-        $process = new Process(['clear']);
-        $process->run();
-        $output->writeln($process->getOutput());
+        $this->io->error($error);
     }
 
-    /**
-     * @param OutputInterface $output
-     * @param TaskData[] $stacked
-     * @param TaskData[] $running
-     */
-    private function renderStackedTable(OutputInterface $output, array $stacked, array $running): void
+    public function printToOutput(array $data, float $elapsedTime): void
     {
-        if (!$output->isDebug()) {
+        if (microtime(true) - $this->lastOverwrite < 0.1) {
             return;
         }
 
+        list($stacked, $running, $done) = $this->filterTasks($data);
+        if ($this->output->isDebug()) {
+            $this->renderStackedTable($stacked, $running);
+        }
+        $this->renderMainTable($data, $running, $done, $elapsedTime);
+
+        if ($this->section !== null) {
+            $this->section->overwrite($this->buffer->fetch() . "\n");
+        } else {
+            $this->output->writeln(["\033[2J\033[;H", $this->buffer->fetch()]);
+        }
+        $this->lastOverwrite = microtime(true);
+    }
+
+    public function finishMessage(array $data, float $duration): void
+    {
+        $this->lastOverwrite = 0;
+        $this->printToOutput($data, $duration);
+
+        $this->io->success(['Finished in ' . TimeHelper::formatTime($duration)]);
+    }
+
+    /**
+     * @param TaskData[] $stacked
+     * @param TaskData[] $running
+     */
+    private function renderStackedTable(array $stacked, array $running): void
+    {
         if (!count($stacked)) {
             return;
         }
 
-        $headers = ['Title', 'Waiting for'];
-        $table = new TableHelper($output);
-        $table
-            ->setHeaders($headers);
+        $table = $this->stackedTable;
+        $table->setRows([]);
 
         foreach ($stacked as $rowTitle => $row) {
             // Mark currently running tasks
@@ -110,8 +139,8 @@ class TableOutput implements Output
             }
 
             $table->addRow([
-                $this->formatTitle($rowTitle, $row),
-                implode(' <yellow>|</yellow> ', $waitingFor)
+                $rowTitle,
+                implode(' <yellow>|</yellow> ', $waitingFor),
             ]);
         }
 
@@ -119,19 +148,16 @@ class TableOutput implements Output
     }
 
     /**
-     * @param OutputInterface $output
      * @param TaskData[] $all
      * @param TaskData[] $running
      * @param TaskData[] $done
-     * @param float $elapsedTime
      */
-    private function renderMainTable(OutputInterface $output, array $all, array $running, array $done, float $elapsedTime): void
+    private function renderMainTable(array $all, array $running, array $done, float $elapsedTime): void
     {
-
-        $headers = ['Title', 'Total', 'Success', 'Skipped', 'Error', 'Warnings', 'Progress', 'Time', 'Memory', 'Message'];
-        $table = new TableHelper($output);
-        $table
-            ->setHeaders($headers);
+        $table = $this->mainTable;
+        $table->setRows([]);
+        $taskWidth = max(array_map('strlen', array_keys($all))) + 2;
+        $table->setColumnWidth(0, $taskWidth);
 
         $total = [
             'count' => 0,
@@ -139,24 +165,35 @@ class TableOutput implements Output
             'skip' => 0,
             'error' => 0,
             'code_errors' => 0,
-            'duration' => 0
+            'duration' => 0,
+            'memory' => 0,
+            'progress' => 0,
         ];
 
         $avgMemoryUsage = $this->getAvgMemoryUsage(array_merge($running, $done));
-        $this->renderDoneTasks($table, $done, $avgMemoryUsage, $total);
-        $this->renderRunningTasks($table, $running, $avgMemoryUsage, $total);
+        if (count($done) === count($all)) {
+            $this->renderTasks($table, $done, $avgMemoryUsage, $total, false);
+        } else {
+            $cutDoneCount = $this->minHeight - count($running);
+            if ($cutDoneCount > 0) {
+                $cutDone = array_slice($done, -$cutDoneCount, null, true);
+                $this->renderTasks($table, $cutDone, $avgMemoryUsage, $total, true);
+            }
+            $this->renderTasks($table, $running, $avgMemoryUsage, $total, true);
+        }
 
+        $table->addRow(new TableSeparator());
+        $cDone = count($done) + $total['progress'];
         $table->addRow([
-            'Total (' . count($done) . '/' . count($all) . ')',
-            number_format($total['count']),
-            number_format($total['success']),
-            number_format($total['skip']),
-            number_format($total['error']),
-            number_format($total['code_errors']),
-            'Saved time: ' . TimeHelper::formatTime(max($total['duration'] - (int) $elapsedTime, 0)),
+            'Total',
+            $this->progress(100 * count($done) / count($all)),
+            $this->numCell(count($done)),
+            $this->numCell(count($all), 'left'),
+            $this->numCell($total['skip']),
+            $this->numCell($total['error']),
+            $this->numCell($total['code_errors']),
             TimeHelper::formatTime($elapsedTime),
-            '',
-            ''
+            DataHelper::convertBytes($total['memory']),
         ]);
 
         $table->render();
@@ -164,8 +201,8 @@ class TableOutput implements Output
 
     /**
      * Filter tasks array
-     * @param array $data
-     * @return array
+     * @param TaskData[] $data
+     * @return array{TaskData[], TaskData[], TaskData[]}
      */
     private function filterTasks(array $data): array
     {
@@ -189,154 +226,106 @@ class TableOutput implements Output
      * @param int $avgMemoryUsage
      * @param array $total
      */
-    private function renderRunningTasks(Table $table, array $rows, int $avgMemoryUsage, array &$total): void
+    private function renderTasks(Table $table, array $rows, int $avgMemoryUsage, array &$total, bool $running): void
     {
+        $errorRows = [];
         foreach ($rows as $rowTitle => $row) {
-            $table->addRow([
-                $this->formatTitle($rowTitle, $row),
-                number_format($row->getCount()),
-                number_format($row->getExtra('success', 0)),
-                number_format($row->getExtra('skip', 0)),
-                number_format($row->getExtra('error', 0)),
-                number_format($row->getCodeErrorsCount()),
+            $time = TimeHelper::formatTime($row->getDuration());
+            if (!$running) {
+                $time = str_pad($time, 5, ' ', STR_PAD_LEFT);
+                $time .= ' │ ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s');
+            }
+
+            $tRow = [
+                $this->taskTitle($rowTitle, $row),
                 $this->progress($row->getProgress()),
-                TimeHelper::formatTime($row->getDuration()) . ' / ' . TimeHelper::formatTime($row->getEstimated()),
-                $this->formatMemory($row, $avgMemoryUsage),
-                $row->getExtra('message', '')
-            ]);
+                $this->numCell($row->getExtra('success', 0)),
+                $this->numCell($row->getCount(), 'left'),
+                $this->numCell($row->getExtra('skip', 0)),
+                $this->numCell($row->getExtra('error', 0)),
+                $this->numCell($row->getCodeErrorsCount()),
+                $time,
+                $this->formatMemory($row, $avgMemoryUsage, !$running),
+            ];
 
-            $total['count'] += $row->getCount();
-            $total['success'] += $row->getExtra('success', 0);
-            $total['skip'] += $row->getExtra('skip', 0);
-            $total['error'] += $row->getExtra('error', 0);
-            $total['code_errors'] += $row->getCodeErrorsCount();
-            $total['duration'] += $row->getDuration();
-        }
-
-        if (count($rows)) {
-            $table->addRow(new TableSeparator());
-        }
-    }
-
-    /**
-     * @param TableHelper $table
-     * @param TaskData[] $rows
-     * @param int $avgMemoryUsage
-     * @param array $total
-     */
-    private function renderDoneTasks(Table $table, array $rows, int $avgMemoryUsage, array &$total): void
-    {
-        $count = count($rows);
-        $doneTasks = 0;
-
-        foreach ($rows as $rowTitle => $row) {
-            $rowMessage = $row->getStackedTask()->getFinishedAt() ? 'Finished at: ' . $row->getStackedTask()->getFinishedAt()->format('H:i:s') : '';
-            if ($row->getExtra('error', 0) && $row->getExtra('message', '')) {
-                $rowMessage .= ". " . $row->getExtra('message', '');
-            }
-
-            $isVisibleRow = $this->doneTasksRows === null || ($this->doneTasksRows > 0 && ($count - $doneTasks <= $this->doneTasksRows));
-            if ($row->getExtra('error', 0) || $isVisibleRow) {
-                $table->addRow([
-                    $this->formatTitle($rowTitle, $row),
-                    number_format($row->getCount()),
-                    number_format($row->getExtra('success', 0)),
-                    number_format($row->getExtra('skip', 0)),
-                    number_format($row->getExtra('error', 0)),
-                    number_format($row->getCodeErrorsCount()),
-                    $this->progress($row->getProgress()),
-                    TimeHelper::formatTime($row->getDuration()),
-                    $this->formatMemory($row, $avgMemoryUsage),
-                    $rowMessage
-                ]);
-            }
-
-            $total['count'] += $row->getCount();
-            $total['success'] += $row->getExtra('success', 0);
-            $total['skip'] += $row->getExtra('skip', 0);
-            $total['error'] += $row->getExtra('error', 0);
-            $total['code_errors'] += $row->getCodeErrorsCount();
-            $total['duration'] += $row->getDuration();
-
-            $doneTasks++;
-        }
-
-        if ($count) {
-            $table->addRow(new TableSeparator());
-        }
-    }
-
-    /**
-     * @param float $progress
-     * @param int $maxSteps
-     * @return string
-     */
-    private function progress(float $progress, int $maxSteps = 20): string
-    {
-        $result = '';
-        $roundedProgress = round($progress / (100 / $maxSteps));
-        for ($i = 1; $i <= $maxSteps; $i++) {
-            if ($roundedProgress > $i || $roundedProgress == $maxSteps) {
-                $result .= '=';
-            } elseif ($roundedProgress == $i) {
-                $result .= '>';
+            if (!$running && $row->getExtra('error', 0) && $row->getExtra('message', '')) {
+                $rowMessage = $row->getExtra('message', '');
+                $errorRows[] = new TableSeparator();
+                $errorRows[] = $tRow;
+                $errorRows[] = [new TableCell("<red>$rowMessage</>", ['colspan' => 8])];
             } else {
-                $result .= '-';
+                $table->addRow($tRow);
             }
+
+            $total['count'] += $row->getCount();
+            $total['progress'] += min(1, $row->getProgress() / 100);
+            $total['success'] += $row->getExtra('success', 0);
+            $total['skip'] += $row->getExtra('skip', 0);
+            $total['error'] += $row->getExtra('error', 0);
+            $total['code_errors'] += $row->getCodeErrorsCount();
+            $total['duration'] += $row->getDuration();
+            $total['memory'] += $row->getMemoryUsage();
         }
-        return $result . ' ' . number_format($progress) . '%';
+
+        if ($errorRows !== []) {
+            $table->addRows($errorRows);
+        }
     }
 
-    /**
-     * @param string $tag
-     * @param string $data
-     * @return string
-     */
-    private function tag(string $tag, string $data): string
+    private function progress(float $percent): string
     {
-        return '<' . $tag . '>' . $data . '</' . $tag . '>';
+        $percent = min($percent, 100);
+        $fullBlocks = floor($percent / 100 * self::PROGRESS_WIDTH);
+        $partialBlock = fmod($percent / 100 * self::PROGRESS_WIDTH, 1);
+
+        $chars = [' ', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '█'];
+        return '<fg=green;bg=gray>' .
+            str_repeat($chars[8], $fullBlocks) .
+            ($partialBlock > 0 ? $chars[round($partialBlock * 8)] : '') .
+            str_repeat(' ', self::PROGRESS_WIDTH - $fullBlocks - ($partialBlock > 0 ? 1 : 0)) .
+            '</>' .
+            str_pad($this->numf($percent), 5, ' ', STR_PAD_LEFT) . '%';
     }
 
-    /**
-     * @param string $rowTitle
-     * @param TaskData $row
-     * @return string
-     */
-    private function formatTitle(string $rowTitle, TaskData $row): string
+    private function numf(float $num): string
     {
-        if (!$row->getStackedTask()->isInStatus(StackedTask::STATUS_DONE)) {
-            return $rowTitle;
-        }
-
-        if ($row->getExtra('error', 0) != 0) {
-            return $this->tag('red', "\xE2\x9C\x96 " . $rowTitle);
-        }
-
-        if ($row->getCodeErrorsCount() != 0) {
-            return $this->tag('yellow', "\xE2\x9C\x96 " . $rowTitle);
-        }
-
-        if ($row->getExtra('success', 0) + $row->getExtra('skip', 0) == $row->getCount()) {
-            return $this->tag('green', "\xE2\x9C\x94 " . $rowTitle);
-        }
-
-        return $rowTitle;
+        return number_format($num, 0, '.', ' ');
     }
 
-    /**
-     * @param TaskData $taskData
-     * @param int $maxMemory
-     * @return string
-     */
-    private function formatMemory(TaskData $taskData, int $maxMemory): string
+    private function numCell(float $num, string $align = 'right'): TableCell
     {
-        $memoryIndex = $taskData->getMemoryPeak()/$maxMemory;
-        $text = DataHelper::convertBytes($taskData->getMemoryUsage()) . ' (' . DataHelper::convertBytes($taskData->getMemoryPeak()) . ')';
+        return new TableCell($this->numf($num),
+            ['style' => new TableCellStyle(['align' => $align, 'options' => 'bold'])]);
+    }
+
+    public function taskTitle(string $title, TaskData $row): string
+    {
+        if ($row->getExtra('error', 0) > 0) {
+            return "<fg=red;options=bold>× $title</>";
+        } elseif ($row->getExtra('skip', 0) > 0 || $row->getCodeErrorsCount() > 0) {
+            return "<fg=yellow;options=bold>⚠ $title</>";
+        } elseif ($row->getCount() <= 0) {
+            return "<fg=gray;options=bold>  $title</>";
+        } elseif ($row->getCurrent() === $row->getCount()) {
+            return "<fg=green;options=bold>✓ $title</>";
+        }
+
+        return "<options=bold>  $title</>";
+    }
+
+    private function formatMemory(TaskData $taskData, int $avgMemory, bool $full = false): string
+    {
+        $memoryIndex = $taskData->getMemoryPeak() / $avgMemory;
+        $text = DataHelper::convertBytes($taskData->getMemoryPeak());
+        if ($full) {
+            $text = DataHelper::convertBytes($taskData->getMemoryUsage()) . '/' . $text;
+        }
 
         if ($memoryIndex > 3) {
-            return "<red>$text</red>";
-        } elseif ($memoryIndex > 2) {
-            return "<yellow>$text</yellow>";
+            return "<red>$text</>";
+        }
+        if ($memoryIndex > 2) {
+            return "<yellow>$text</>";
         }
 
         return "$text";
@@ -344,7 +333,6 @@ class TableOutput implements Output
 
     /**
      * @param TaskData[] $data
-     * @return int
      */
     private function getAvgMemoryUsage(array $data): int
     {
