@@ -4,6 +4,9 @@
 ### Added 
 - Add error logging to ProgressTask and BatchProgressTask
 
+### Fixed
+- Division by zero in average memory usage
+
 ## 2.3.0 - 2024-05-14
 ### Added
 - Configurable sleeping time
