@@ -359,6 +359,6 @@ class TableOutput implements Output
             return 0;
         }
 
-        return floor($memory / $count);
+        return floor($memory / $count) ?: 1;
     }
 }

@@ -1,6 +1,9 @@
 # Change log
 
 ## [Unreleased][unreleased]
+### Fixed
+- Division by zero in average memory usage
+
 ## 2.3.0 - 2024-05-14
 ### Added
 - Configurable sleeping time
