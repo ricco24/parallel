@@ -209,20 +209,21 @@ class Parallel
      * @param InputInterface $input
      * @param OutputInterface $output
      */
-    public function execute(InputInterface $input, OutputInterface $output): void
+    public function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->output->setOutput($output);
         try {
             $this->initializeTaskStack($input->getOption('subnet'));
         } catch (TaskStackFactoryException $e) {
-            $this->output->errorMessage($output, $e->getMessage());
-            return;
+            $this->output->errorMessage($e->getMessage());
+            return 1;
         }
 
         $this->globalTaskLogger = $this->taskLoggerFactory->create('global');
         $this->globalTaskLogger->prepareGlobal(count($this->taskStack->getStackedTasks()), $input->getOption('subnet'));
 
         $start = microtime(true);
-        $this->output->startMessage($output);
+        $this->output->startMessage();
 
         // Add all tasks to tasks data array
         foreach ($this->taskStack->getStackedTasks() as $stashedTask) {
@@ -250,7 +251,7 @@ class Parallel
                     }
 
                     // Redraw output when task finished
-                    $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                    $this->output->printToOutput($this->data, microtime(true) - $start);
                     $this->logDoneStackedTask($doneStackedTask);
                 }
             }
@@ -286,7 +287,7 @@ class Parallel
                             $this->logger->error($stackedTask->getTask()->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine));
                         }
 
-                        $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                        $this->output->printToOutput($this->data, microtime(true) - $start);
                         return;
                     }
 
@@ -307,15 +308,17 @@ class Parallel
                     }
 
                     $this->buildTaskData($stackedTask, $data);
-                    $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                    $this->output->printToOutput($this->data, microtime(true) - $start);
                 });
                 usleep(floor($this->sleep * self::MICROSECONDS_IN_SECOND));
             }
         }
 
         $this->globalTaskLogger->processGlobal();
-        $this->output->printToOutput($output, $this->data, microtime(true) - $start);
-        $this->output->finishMessage($output, $this->data, microtime(true) - $start);
+        $this->output->printToOutput($this->data, microtime(true) - $start);
+        $this->output->finishMessage($this->data, microtime(true) - $start);
+
+        return 0;
     }
 
     /**

@@ -128,7 +128,7 @@ abstract class Task extends Command
      * @param OutputInterface $output
      * @return int|null
      */
-    protected function execute(InputInterface $input, OutputInterface $output): ?int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->output = $output;
         $this->taskOutput = new BaseTaskOutput();
