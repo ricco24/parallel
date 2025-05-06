@@ -66,6 +66,9 @@ class Parallel
     /** @var float */
     private $sleep;
 
+    /** @var string */
+    private $binPhpPath;
+
     /** @var array<string, string[]> */
     private $generatedTasks = [];
 
@@ -74,17 +77,20 @@ class Parallel
      * @param string $fileName        Parallel binary filename
      * @param int $concurrent         Max count of concurrent tasks
      * @param float $secondsSleep     Sleep time between tasks
+     * @param string $binPhpPath      Path to PHP binary
      */
     public function __construct(
         string $binDirPath,
         string $fileName,
         int $concurrent = 3,
-        float $secondsSleep = 1.0
+        float $secondsSleep = 1.0,
+        string $binPhpPath = 'php'
     ) {
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
         $this->concurrent = $concurrent;
         $this->sleep = $secondsSleep;
+        $this->binPhpPath = $binPhpPath;
         $this->logger = new NullLogger();
         $this->taskLoggerFactory = new NullTaskLoggerFactory();
         $this->app = new Application();
@@ -270,7 +276,7 @@ class Parallel
                 }
 
                 $processes[] = $process = [
-                    'process' => new Process(['php', $this->fileName, $stackedTask->getTask()->getName()], $this->binDirPath, null, null, null),
+                    'process' => new Process([$this->binPhpPath, $this->fileName, $stackedTask->getTask()->getName()], $this->binDirPath, null, null, null),
                     'stackedTask' => $stackedTask
                 ];
 

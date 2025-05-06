@@ -7,6 +7,9 @@
 ### Fixed
 - Division by zero in average memory usage
 
+### Added
+- Added support to set a custom PHP binary path in `Parallel` class
+
 ## 2.3.0 - 2024-05-14
 ### Added
 - Configurable sleeping time
