@@ -73,18 +73,20 @@ class Parallel
     private $generatedTasks = [];
 
     /**
-     * @param string $binDirPath      Path to directory with parallel binary
-     * @param string $fileName        Parallel binary filename
-     * @param int $concurrent         Max count of concurrent tasks
-     * @param float $secondsSleep     Sleep time between tasks
-     * @param string $binPhpPath      Path to PHP binary
+     * @param string $binDirPath            Path to directory with parallel binary
+     * @param string $fileName              Parallel binary filename
+     * @param int $concurrent               Max count of concurrent tasks
+     * @param float $secondsSleep           Sleep time between tasks
+     * @param string $binPhpPath            Path to PHP binary
+     * @param Application|null Application  Optional Symfony Console application instance
      */
     public function __construct(
         string $binDirPath,
         string $fileName,
         int $concurrent = 3,
         float $secondsSleep = 1.0,
-        string $binPhpPath = 'php'
+        string $binPhpPath = 'php',
+        Application $application = null
     ) {
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
@@ -93,7 +95,7 @@ class Parallel
         $this->binPhpPath = $binPhpPath;
         $this->logger = new NullLogger();
         $this->taskLoggerFactory = new NullTaskLoggerFactory();
-        $this->app = new Application();
+        $this->app = $application ?: new Application();
         $this->app->add(new RunCommand($this));
         $this->app->add(new AnalyzeGraphCommand($this));
 
