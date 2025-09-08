@@ -9,6 +9,7 @@
 
 ### Added
 - Added support to set a custom PHP binary path in `Parallel` class
+- Added support for providing a custom Symfony Application instance to `Parallel` class
 
 ## 2.3.0 - 2024-05-14
 ### Added
