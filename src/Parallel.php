@@ -86,7 +86,7 @@ class Parallel
         int $concurrent = 3,
         float $secondsSleep = 1.0,
         string $binPhpPath = 'php',
-        Application $application = null
+        ?Application $application = null
     ) {
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
