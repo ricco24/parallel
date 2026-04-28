@@ -2,6 +2,10 @@
 
 ## [Unreleased][unreleased]
 
+## 2.4.1 - 2026-04-28
+### Fixes
+- Small fixes (version bump)
+
 ## 2.4.0 - 2026-04-28
 ### Added
 - Added support to set a custom PHP binary path in `Parallel` class
@@ -47,7 +51,8 @@
 ## 1.0.0 - 2016-06-06
 - First tagged version
 
-[unreleased]: https://github.com/ricco24/parallel/compare/2.4.0...HEAD
+[unreleased]: https://github.com/ricco24/parallel/compare/2.4.1...HEAD
+[2.4.1]: https://github.com/ricco24/parallel/compare/2.4.0...2.4.1
 [2.4.0]: https://github.com/ricco24/parallel/compare/2.3.0...2.4.0
 [2.3.0]: https://github.com/ricco24/parallel/compare/2.2.0...2.3.0
 [2.2.0]: https://github.com/ricco24/parallel/compare/2.1.0...2.2.0
