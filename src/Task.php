@@ -39,7 +39,7 @@ abstract class Task extends Command
     /**
      * @param string|null $name
      */
-    public function __construct(string $name = null)
+    public function __construct(?string $name = null)
     {
         parent::__construct($name);
         $this->logger = new NullLogger();
@@ -128,7 +128,7 @@ abstract class Task extends Command
      * @param OutputInterface $output
      * @return int|null
      */
-    protected function execute(InputInterface $input, OutputInterface $output): ?int
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $this->output = $output;
         $this->taskOutput = new BaseTaskOutput();
@@ -161,7 +161,7 @@ abstract class Task extends Command
      * @param BaseTaskResult|null $taskResult
      * @return array
      */
-    protected function getLogContext(BaseTaskResult $taskResult = null): array
+    protected function getLogContext(?BaseTaskResult $taskResult = null): array
     {
         $result = [
             'task' => $this->getName(),

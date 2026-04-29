@@ -73,18 +73,20 @@ class Parallel
     private $generatedTasks = [];
 
     /**
-     * @param string $binDirPath      Path to directory with parallel binary
-     * @param string $fileName        Parallel binary filename
-     * @param int $concurrent         Max count of concurrent tasks
-     * @param float $secondsSleep     Sleep time between tasks
-     * @param string $binPhpPath      Path to PHP binary
+     * @param string $binDirPath            Path to directory with parallel binary
+     * @param string $fileName              Parallel binary filename
+     * @param int $concurrent               Max count of concurrent tasks
+     * @param float $secondsSleep           Sleep time between tasks
+     * @param string $binPhpPath            Path to PHP binary
+     * @param Application|null Application  Optional Symfony Console application instance
      */
     public function __construct(
         string $binDirPath,
         string $fileName,
         int $concurrent = 3,
         float $secondsSleep = 1.0,
-        string $binPhpPath = 'php'
+        string $binPhpPath = 'php',
+        ?Application $application = null
     ) {
         $this->binDirPath = $binDirPath;
         $this->fileName = $fileName;
@@ -93,7 +95,7 @@ class Parallel
         $this->binPhpPath = $binPhpPath;
         $this->logger = new NullLogger();
         $this->taskLoggerFactory = new NullTaskLoggerFactory();
-        $this->app = new Application();
+        $this->app = $application ?: new Application();
         $this->app->add(new RunCommand($this));
         $this->app->add(new AnalyzeGraphCommand($this));
 
@@ -215,20 +217,21 @@ class Parallel
      * @param InputInterface $input
      * @param OutputInterface $output
      */
-    public function execute(InputInterface $input, OutputInterface $output): void
+    public function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->output->setOutput($output);
         try {
             $this->initializeTaskStack($input->getOption('subnet'));
         } catch (TaskStackFactoryException $e) {
-            $this->output->errorMessage($output, $e->getMessage());
-            return;
+            $this->output->errorMessage($e->getMessage());
+            return 1;
         }
 
         $this->globalTaskLogger = $this->taskLoggerFactory->create('global');
         $this->globalTaskLogger->prepareGlobal(count($this->taskStack->getStackedTasks()), $input->getOption('subnet'));
 
         $start = microtime(true);
-        $this->output->startMessage($output);
+        $this->output->startMessage();
 
         // Add all tasks to tasks data array
         foreach ($this->taskStack->getStackedTasks() as $stashedTask) {
@@ -256,7 +259,7 @@ class Parallel
                     }
 
                     // Redraw output when task finished
-                    $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                    $this->output->printToOutput($this->data, microtime(true) - $start);
                     $this->logDoneStackedTask($doneStackedTask);
                 }
             }
@@ -292,7 +295,7 @@ class Parallel
                             $this->logger->error($stackedTask->getTask()->getSanitizedName() . ': ' . StringHelper::sanitize($errorLine));
                         }
 
-                        $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                        $this->output->printToOutput($this->data, microtime(true) - $start);
                         return;
                     }
 
@@ -313,15 +316,17 @@ class Parallel
                     }
 
                     $this->buildTaskData($stackedTask, $data);
-                    $this->output->printToOutput($output, $this->data, microtime(true) - $start);
+                    $this->output->printToOutput($this->data, microtime(true) - $start);
                 });
                 usleep(floor($this->sleep * self::MICROSECONDS_IN_SECOND));
             }
         }
 
         $this->globalTaskLogger->processGlobal();
-        $this->output->printToOutput($output, $this->data, microtime(true) - $start);
-        $this->output->finishMessage($output, $this->data, microtime(true) - $start);
+        $this->output->printToOutput($this->data, microtime(true) - $start);
+        $this->output->finishMessage($this->data, microtime(true) - $start);
+
+        return 0;
     }
 
     /**

@@ -1,6 +1,18 @@
 # Change log
 
 ## [Unreleased][unreleased]
+### Added
+- Add error logging to ProgressTask and BatchProgressTask
+- Added support for providing a custom Symfony Application instance to `Parallel` class
+
+### Changed
+- Normalized nullable parameter type declarations (potential BC if methods are overridden)
+
+### Fixed
+- Division by zero in average memory usage
+- Flickering of table output significantly reduced!
+- Progress bar shows fractional progress
+- Summary table on finish instead of done tasks
 
 ## 2.4.1 - 2026-04-28
 ### Fixes
