@@ -1,6 +1,8 @@
 # Change log
 
 ## [Unreleased][unreleased]
+
+## 2.5.0 - 2026-04-29
 ### Added
 - Add error logging to ProgressTask and BatchProgressTask
 - Added support for providing a custom Symfony Application instance to `Parallel` class
@@ -63,7 +65,8 @@
 ## 1.0.0 - 2016-06-06
 - First tagged version
 
-[unreleased]: https://github.com/ricco24/parallel/compare/2.4.1...HEAD
+[unreleased]: https://github.com/ricco24/parallel/compare/2.5.0...HEAD
+[2.5.0]: https://github.com/ricco24/parallel/compare/2.4.1...2.5.0
 [2.4.1]: https://github.com/ricco24/parallel/compare/2.4.0...2.4.1
 [2.4.0]: https://github.com/ricco24/parallel/compare/2.3.0...2.4.0
 [2.3.0]: https://github.com/ricco24/parallel/compare/2.2.0...2.3.0
