@@ -24,14 +24,12 @@ class TimeHelper
             $seconds -= $minutes * 60;
         }
 
+        $str = '';
         if ($hours > 0) {
-            return $hours . 'h ' . $minutes . 'm ' . $seconds . 's';
+            $str .= str_pad($hours, 2, 0, STR_PAD_LEFT) . ':';
         }
 
-        if ($minutes > 0) {
-            return $minutes . 'm ' . $seconds . 's';
-        }
-
-        return $seconds . 's';
+        return $str . str_pad($minutes, 2, 0, STR_PAD_LEFT) . ':' .
+            str_pad($seconds, 2, 0, STR_PAD_LEFT);
     }
 }
